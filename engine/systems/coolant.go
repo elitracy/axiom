@@ -26,7 +26,8 @@ func NewCoolantSystem(ambientTemp float64) *CoolantSystem {
 		pressureLeakRate: 2.5,
 		pressureGainRate: 2,
 
-		maxFlowRate:  1,
+		maxFlowRate: 1,
+
 		maxTempDelta: 500, // matches powers max temp
 		coolingRate:  6,
 	}
@@ -39,8 +40,9 @@ func (s *CoolantSystem) Tick(heatLoad float64) {
 	s.pressure = utils.Clamp(s.pressure, 0, s.maxPressure)
 
 	tempDelta := heatLoad - s.temp
-	coolingEffect := s.flowRate * s.coolingRate * (tempDelta / s.maxTempDelta)
-	s.temp += heatLoad - coolingEffect
+	transferRate := s.flowRate * s.coolingRate * (tempDelta / s.maxTempDelta)
+	s.temp += transferRate
+	s.temp = min(s.temp, heatLoad)
 
 	s.sensorValues["flow_rate"] = s.flowRate
 	s.sensorValues["pressure"] = s.pressure

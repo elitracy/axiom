@@ -9,35 +9,35 @@ import (
 func TestCoolantTick(t *testing.T) {
 	const ambientTemp = 20
 	const startingHeat = 350
-	p := systems.NewCoolantSystem(ambientTemp)
+	c := systems.NewCoolantSystem(ambientTemp)
 
-	p.Tick(startingHeat)
+	c.Tick(startingHeat)
 
-	if p.Health() != 99 {
+	if c.Health() != 99 {
 		t.Error("Health should degrade as the system ticks.")
 	}
 
-	if p.Sensors()["temp"] <= ambientTemp {
+	if c.Sensors()["temp"] <= ambientTemp {
 		t.Error("The coolant should heat up as it absorbs heat.")
 	}
 
-	if p.Sensors()["flow_rate"] >= 1.0 {
+	if c.Sensors()["flow_rate"] >= 1.0 {
 		t.Error("Flow rate should not exceed 1.0 (100%).")
 	}
 
-	if p.Sensors()["flow_rate"] <= 0.0 {
+	if c.Sensors()["flow_rate"] <= 0.0 {
 		t.Error("Coolant should be flowing to absorb heat.")
 	}
 
-	if p.Sensors()["pressure"] >= 80 {
+	if c.Sensors()["pressure"] >= 80 {
 		t.Error("Pressure should passively decrease for the player to patch.")
 	}
 
 	var deltas []float64
 	for i := range 20 {
-		prevTemp := p.Sensors()["temp"]
-		p.Tick(startingHeat - float64(10*i))
-		delta := p.Sensors()["temp"] - prevTemp
+		prevTemp := c.Sensors()["temp"]
+		c.Tick(startingHeat - float64(10*i))
+		delta := c.Sensors()["temp"] - prevTemp
 		deltas = append(deltas, delta)
 	}
 

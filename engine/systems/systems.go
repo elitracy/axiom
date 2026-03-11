@@ -1,5 +1,7 @@
 package systems
 
+import "fmt"
+
 type SystemStatus int8
 
 const (
@@ -16,6 +18,7 @@ type Subsystem interface {
 	Status() SystemStatus
 	Sensors() map[string]float64
 	DegradationRate() float64
+	String() string
 }
 
 type SubsystemCore struct {
@@ -52,4 +55,13 @@ func (s *SubsystemCore) Status() SystemStatus {
 	default:
 		return Online
 	}
+}
+
+func (s *SubsystemCore) String() string {
+	output := ""
+
+	output += fmt.Sprintf("%v: %.2f%%\n", s.name, s.health*100)
+	output += fmt.Sprintf("%v", s.Sensors())
+
+	return output
 }

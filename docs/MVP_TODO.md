@@ -33,7 +33,7 @@ Define the core `WorldState` struct that holds all subsystems and a tick counter
 - [x] `SubsystemCore` embedded struct with shared fields and accessors
 - [x] Status derived from health: >70 Online, 30-70 Degraded, 1-29 Critical, 0 Offline
 - [x] `Tick()` method that updates all subsystems with explicit dependency wiring
-- [ ] Unit test: create a world, tick it N times, verify health decreases
+- [x] Unit test: create a world, tick it N times, verify health decreases
 
 ---
 
@@ -44,9 +44,9 @@ Implement the three concrete subsystems with their unique behaviors and per-syst
 
 - [x] **Power**: `Tick(coolantFlow, ambientTemp)` — consumes fuel scaled by output level, temperature rises from output heat minus coolant dissipation, clamped to bounds
 - [x] **Coolant**: `Tick(heatLoad)` — flow rate derived from pump health and backpressure, pressure accumulates from flow and bleeds passively, temperature uses diminishing returns as coolant temp approaches heat source
-- [ ] **Life Support**: `Tick(powerAvailable)` — O2 consumed per tick, scrubber restores O2 and removes CO2 scaled by power available
+- [x] **Life Support**: `Tick(powerAvailable)` — O2 consumed per tick, scrubber restores O2 and removes CO2 scaled by power available
 - [x] Each subsystem updates its own sensors during tick
-- [ ] Unit tests for each subsystem's tick behavior
+- [x] Unit tests for each subsystem's tick behavior
 
 ---
 
@@ -56,7 +56,7 @@ Implement the three concrete subsystems with their unique behaviors and per-syst
 Wire subsystems together in WorldState.Tick() so failures cascade. The wiring is explicit — power's coolant flow comes from coolant's sensor, coolant's heat load comes from power's sensor, life support's power available comes from power's sensor.
 
 - [x] Explicit dependency wiring in WorldState.Tick() (no generic subsystem loop)
-- [ ] Power output affects life support and coolant effectiveness
+- [x] Power output affects life support and coolant effectiveness
 - [ ] Coolant failure causes power temperature to rise
 - [ ] Power overheating triggers safety throttle (reduced output) then shutdown
 - [ ] Life support effectiveness scales with available power

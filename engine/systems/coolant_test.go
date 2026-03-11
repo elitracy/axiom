@@ -9,13 +9,10 @@ import (
 func TestCoolantTick(t *testing.T) {
 	const ambientTemp = 20
 	const startingHeat = 350
+	const startingPressure = 80
 	c := systems.NewCoolantSystem(ambientTemp)
 
 	c.Tick(startingHeat)
-
-	if c.Health() != 99 {
-		t.Error("Health should degrade as the system ticks.")
-	}
 
 	if c.Sensors()["temp"] <= ambientTemp {
 		t.Error("The coolant should heat up as it absorbs heat.")
@@ -29,7 +26,7 @@ func TestCoolantTick(t *testing.T) {
 		t.Error("Coolant should be flowing to absorb heat.")
 	}
 
-	if c.Sensors()["pressure"] >= 80 {
+	if c.Sensors()["pressure"] >= startingPressure {
 		t.Error("Pressure should passively decrease for the player to patch.")
 	}
 

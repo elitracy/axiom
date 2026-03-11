@@ -21,8 +21,8 @@ type Subsystem interface {
 type SubsystemCore struct {
 	id              string
 	name            string
-	health          float64
 	sensorValues    map[string]float64
+	health          float64
 	degradationRate float64
 }
 
@@ -30,9 +30,9 @@ func NewSubsystem(name string) *SubsystemCore {
 	return &SubsystemCore{
 		id:              "",
 		name:            name,
-		health:          100,
 		sensorValues:    make(map[string]float64),
-		degradationRate: 1, // fail after 100 ticks
+		health:          1.0,
+		degradationRate: 0.01,
 	}
 }
 
@@ -45,9 +45,9 @@ func (s *SubsystemCore) Status() SystemStatus {
 	switch {
 	case s.health <= 0:
 		return Offline
-	case s.health <= 30:
+	case s.health <= .30:
 		return Critical
-	case s.health <= 70:
+	case s.health <= .70:
 		return Degraded
 	default:
 		return Online

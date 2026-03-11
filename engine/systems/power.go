@@ -6,10 +6,10 @@ import (
 
 type PowerSystem struct {
 	*SubsystemCore
-	fuelLevel           float64
+	fuelLevel           float64 // % of tank
 	fuelConsumptionRate float64
-	outputLevel         float64 // 0-1
-	heatRate            float64
+	outputLevel         float64
+	heatRate            float64 // celsius/tick
 	coolRate            float64
 	temp                float64
 	maxTemp             float64
@@ -18,11 +18,11 @@ type PowerSystem struct {
 func NewPowerSystem(ambientTemp float64) *PowerSystem {
 	return &PowerSystem{
 		SubsystemCore:       NewSubsystem("Power"),
-		fuelLevel:           100,
-		fuelConsumptionRate: 1, // run out of fuel at 100 ticks
-		outputLevel:         1,
-		coolRate:            5, // neutral temp rate
-		heatRate:            5, // overheat at 100 ticks
+		fuelLevel:           1.0,
+		fuelConsumptionRate: 0.01,
+		outputLevel:         1.0,
+		coolRate:            5,
+		heatRate:            5,
 		temp:                ambientTemp,
 		maxTemp:             500,
 	}
@@ -30,10 +30,10 @@ func NewPowerSystem(ambientTemp float64) *PowerSystem {
 
 func (s *PowerSystem) SetOutputLevel(level float64) { s.outputLevel = level }
 
-func (s *PowerSystem) Tick(coolantFlow, ambientTemp float64) {
+func (s *PowerSystem) Tick(coolantFlowRate, ambientTemp float64) {
 
 	heatGenerated := s.outputLevel * s.heatRate
-	heatDissipated := coolantFlow * s.coolRate
+	heatDissipated := coolantFlowRate * s.coolRate
 	s.temp += heatGenerated - heatDissipated
 	s.temp = utils.Clamp(s.temp, 0, s.maxTemp)
 

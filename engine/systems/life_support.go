@@ -13,7 +13,7 @@ const (
 )
 
 type LifeSupportSystem struct {
-	*SubsystemCore
+	*SystemCore
 	o2                 float64 // % of atmo
 	co2                float64
 	scrubberEfficiency float64
@@ -23,7 +23,7 @@ type LifeSupportSystem struct {
 
 func NewLifeSupportSystem() *LifeSupportSystem {
 	system := &LifeSupportSystem{
-		SubsystemCore:      NewSubsystem("Life Support"),
+		SystemCore:      NewSystem("Life Support"),
 		o2:                 startingO2,
 		co2:                startingCO2,
 		scrubberEfficiency: 1.0,

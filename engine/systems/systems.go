@@ -11,7 +11,7 @@ const (
 	Online
 )
 
-type Subsystem interface {
+type System interface {
 	ID() string
 	Name() string
 	Health() float64
@@ -21,7 +21,7 @@ type Subsystem interface {
 	String() string
 }
 
-type SubsystemCore struct {
+type SystemCore struct {
 	id              string
 	name            string
 	sensorValues    map[string]float64
@@ -29,8 +29,8 @@ type SubsystemCore struct {
 	degradationRate float64
 }
 
-func NewSubsystem(name string) *SubsystemCore {
-	return &SubsystemCore{
+func NewSystem(name string) *SystemCore {
+	return &SystemCore{
 		id:              "",
 		name:            name,
 		sensorValues:    make(map[string]float64),
@@ -39,12 +39,12 @@ func NewSubsystem(name string) *SubsystemCore {
 	}
 }
 
-func (s *SubsystemCore) ID() string                  { return s.id }
-func (s *SubsystemCore) Name() string                { return s.name }
-func (s *SubsystemCore) Health() float64             { return s.health }
-func (s *SubsystemCore) Sensors() map[string]float64 { return s.sensorValues }
-func (s *SubsystemCore) DegradationRate() float64    { return s.degradationRate }
-func (s *SubsystemCore) Status() SystemStatus {
+func (s *SystemCore) ID() string                  { return s.id }
+func (s *SystemCore) Name() string                { return s.name }
+func (s *SystemCore) Health() float64             { return s.health }
+func (s *SystemCore) Sensors() map[string]float64 { return s.sensorValues }
+func (s *SystemCore) DegradationRate() float64    { return s.degradationRate }
+func (s *SystemCore) Status() SystemStatus {
 	switch {
 	case s.health <= 0:
 		return Offline
@@ -57,7 +57,7 @@ func (s *SubsystemCore) Status() SystemStatus {
 	}
 }
 
-func (s *SubsystemCore) String() string {
+func (s *SystemCore) String() string {
 	output := ""
 
 	output += fmt.Sprintf("%v: %.2f%%\n", s.name, s.health*100)

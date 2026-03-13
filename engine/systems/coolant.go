@@ -3,7 +3,7 @@ package systems
 import "github.com/elias/axiom/engine/utils"
 
 type CoolantSystem struct {
-	*SubsystemCore
+	*SystemCore
 	pressure float64 // psi
 	flowRate float64 // liters/tick
 	temp     float64 // celsius
@@ -16,7 +16,7 @@ type CoolantSystem struct {
 
 func NewCoolantSystem(ambientTemp float64) *CoolantSystem {
 	return &CoolantSystem{
-		SubsystemCore: NewSubsystem("Coolant"),
+		SystemCore: NewSystem("Coolant"),
 		temp:          ambientTemp,
 		pressure:      30,
 

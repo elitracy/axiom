@@ -5,7 +5,7 @@ import (
 )
 
 type PowerSystem struct {
-	*SubsystemCore
+	*SystemCore
 	fuelLevel           float64 // % of tank
 	fuelConsumptionRate float64
 	outputLevel         float64
@@ -17,7 +17,7 @@ type PowerSystem struct {
 
 func NewPowerSystem(ambientTemp float64) *PowerSystem {
 	system := &PowerSystem{
-		SubsystemCore:       NewSubsystem("Power"),
+		SystemCore:       NewSystem("Power"),
 		fuelLevel:           1.0,
 		fuelConsumptionRate: 0.01,
 		outputLevel:         1.0,

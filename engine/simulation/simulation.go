@@ -1,52 +1,22 @@
 package simulation
 
 import (
-	"fmt"
-
+	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/systems"
 )
 
-const (
-	ambientTemp = 25.0
-)
-
 type WorldState struct {
-	tick        int64
-	power       *systems.PowerSystem
-	coolant     *systems.CoolantSystem
-	lifeSupport *systems.LifeSupportSystem
-
-	ambientTemp float64
+	systems []systems.System
 }
 
-func (s *WorldState) Power() *systems.PowerSystem             { return s.power }
-func (s *WorldState) Coolant() *systems.CoolantSystem         { return s.coolant }
-func (s *WorldState) LifeSupport() *systems.LifeSupportSystem { return s.lifeSupport }
+func (ws *WorldState) AddSystem(system systems.System) {
+	ws.systems = append(ws.systems, system)
+}
 
-func NewWorldState() *WorldState {
-	return &WorldState{
-		tick:        0,
-		power:       systems.NewPowerSystem(ambientTemp),
-		coolant:     systems.NewCoolantSystem(ambientTemp),
-		lifeSupport: systems.NewLifeSupportSystem(),
-		ambientTemp: ambientTemp,
+func (ws *WorldState) Update(tick engine.Tick) {
+	for _, system := range ws.systems {
+		system.Tick()
+		logging.Info(system.String())
 	}
-}
-
-func (w *WorldState) Tick() {
-	powerTemp := w.power.Sensors()["temp"]
-	coolantFlowRate := w.coolant.Sensors()["flow_rate"]
-	powerLevel := w.power.Sensors()["output_level"]
-
-	w.coolant.Tick(powerTemp)
-	w.power.Tick(coolantFlowRate, w.ambientTemp)
-	w.lifeSupport.Tick(powerLevel)
-	w.tick++
-}
-
-func (w *WorldState) String() string {
-	output := fmt.Sprintf("[tick:%v] %v", w.tick, w.power)
-	output += fmt.Sprintf("\n[tick:%v] %v", w.tick, w.coolant)
-	output += fmt.Sprintf("\n[tick:%v] %v", w.tick, w.lifeSupport)
-	return output
 }

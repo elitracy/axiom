@@ -68,6 +68,16 @@ will be using organic matter but will quickly transition to oil.
 | Steam | steam-engine | low | fuel (water, coal), pressure, thermal, power |
 
 
+#### Ticking
+Power ticking is based on the fuel remaining, the temperature of the system, and the health of the system
+| Component | Effects |
+| --- | --- |
+| Fuel | If fuel reaches 0 then the system no longer generates power |
+| Temperature | If the temperature of the system gets too hot the health of the system will degrade faster |
+| Health | If health reaches 0 then the system will stop producing power |
+| Power | Power will be produced as a factor of the components above | 
+
+
 ### Cooling
 Cooling for power generation can be done using a "coolant". The coolant you use will differ per thermal source.
 

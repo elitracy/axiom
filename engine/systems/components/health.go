@@ -3,8 +3,6 @@ package components
 import "github.com/elias/axiom/engine/systems"
 
 const (
-	min_health              = 0.0
-	max_health              = 1.0
 	healthOfflineThreshold  = 0.0
 	healthCriticalThreshold = 0.3
 	healthDegradedThreshold = 0.7
@@ -21,8 +19,6 @@ func NewHealthComponent(initial float64) *Health {
 		ComponentCore: NewComponent(
 			"Health",
 			initial,
-			min_health,
-			max_health,
 		),
 	}
 }

@@ -3,6 +3,7 @@ package systems
 import (
 	"fmt"
 
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
 	"github.com/elias/axiom/engine/utils"
@@ -12,17 +13,19 @@ import (
 const (
 	ticksTillDeath = 20
 
-	maxGeneratorTemperature = 500.0
+	startingPower       = 1.0
+	startingFuel        = 1.0
+	startingHealth      = 1.0
+	startingTemperature = 0.0
 
-	startingPower  = 1.0
-	startingFuel   = 1.0
-	startingHealth = 1.0
+	maxTemperature = 500.0
 
-	percentFuelUsedPerTick          = 1.0 / ticksTillDeath
-	percentTemperatureRaisedPerTick = maxGeneratorTemperature / ticksTillDeath
+	percentFuelLostPerTick          = 1.0 / ticksTillDeath
+	percentTemperatureGainedPerTick = 1.0 / ticksTillDeath
 	percentHealthLostPerTick        = 1.0 / ticksTillDeath
 )
 
+// A system that creates power from fuel but generates a lot of heat
 type Generator struct {
 	*systems.SystemCore
 	power       components.Component
@@ -36,28 +39,28 @@ type Generator struct {
 func NewGenerator(ambientTemperature float64) *Generator {
 
 	temperatureCurve := func(x float64) float64 {
-		normalized := (x - ambientTemperature) / (maxGeneratorTemperature - ambientTemperature)
-		return (utils.Tanh(normalized, 3.1, 0)+0.015)*(maxGeneratorTemperature-ambientTemperature) + ambientTemperature
+		value := (utils.Tanh(x, 3.1, 0)+0.015)*(maxTemperature-ambientTemperature) + ambientTemperature
+		return utils.Clamp(ambientTemperature, value, maxTemperature)
 	}
 
 	system := &Generator{
 		SystemCore:  systems.NewSystemCore("Generator"),
-		power:       components.NewComponent("Power", startingPower, 0.0, 1.0),
-		fuel:        components.NewComponent("Fuel", startingFuel, 0.0, 1.0),
-		temperature: components.NewComponent("Temperature", ambientTemperature, ambientTemperature, maxGeneratorTemperature, temperatureCurve),
+		power:       components.NewComponent("Power", startingPower),
+		fuel:        components.NewComponent("Fuel", startingFuel),
+		temperature: components.NewComponent("Temperature", startingTemperature, temperatureCurve),
 		health:      components.NewHealthComponent(startingHealth),
 	}
 
 	return system
-
 }
 
+// Updates the component values for the generator
 func (s *Generator) Tick() {
-	if s.fuel.ApplyValueCurve() <= s.fuel.Min() {
+	if s.fuel.Value() <= s.fuel.Min() {
 		s.power.SetValue(s.power.Min())
 	}
 
-	if s.temperature.ApplyValueCurve() >= s.temperature.Max() {
+	if s.temperature.Value() >= s.temperature.Max() {
 		s.power.SetValue(s.power.Min())
 	}
 
@@ -65,16 +68,17 @@ func (s *Generator) Tick() {
 		s.power.SetValue(s.power.Min())
 	}
 
-	if s.power.ApplyValueCurve() != s.power.Min() {
-		s.fuel.SetValue(s.fuel.Value() - percentFuelUsedPerTick)
-		s.temperature.SetValue(s.temperature.Value() + percentTemperatureRaisedPerTick)
+	if s.power.Value() != s.power.Min() {
+		s.fuel.SetValue(s.fuel.Value() - percentFuelLostPerTick)
+		s.temperature.SetValue(s.temperature.Value() + percentTemperatureGainedPerTick)
 	} else {
-		s.temperature.SetValue(s.temperature.Value() - percentTemperatureRaisedPerTick)
+		s.temperature.SetValue(s.temperature.Value() - percentTemperatureGainedPerTick)
 	}
 
 	s.health.SetValue(s.health.Value() - percentHealthLostPerTick)
 }
 
+// Returns the stringified information for the generator
 func (s *Generator) String() string {
 
 	output := fmt.Sprintf("%v: %v", s.ID(), s.Name())

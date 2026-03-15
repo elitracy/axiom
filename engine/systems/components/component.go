@@ -32,8 +32,8 @@ type ComponentCore struct {
 }
 
 // Creates a new component
-// value is the starting value for the component, min is the minimum value, max is the maximum value, valueCurve is the function to calcuate the current value
-func NewComponent(name string, value, min, max float64, valueCurve ...func(float64) float64) *ComponentCore {
+// initialValue is the starting value for the component, min is the minimum value, max is the maximum value, valueCurve is the function to calcuate the current value
+func NewComponent(name string, initialValue float64, valueCurve ...func(float64) float64) *ComponentCore {
 
 	var curve func(float64) float64
 	if len(valueCurve) > 0 {
@@ -44,9 +44,9 @@ func NewComponent(name string, value, min, max float64, valueCurve ...func(float
 		// TODO: generate component IDS dynamically
 		id:         ComponentID{id: 0},
 		name:       name,
-		value:      value,
-		min:        min,
-		max:        max,
+		value:      initialValue,
+		min:        0.0,
+		max:        1.0,
 		valueCurve: curve,
 	}
 
@@ -72,13 +72,11 @@ func (c *ComponentCore) Max() float64 { return c.max }
 
 // Returns the current component value on the valueCurve function
 func (c *ComponentCore) ApplyValueCurve() float64 {
-	value := c.Value()
 	if c.valueCurve != nil {
-
-		value = c.valueCurve(c.Value())
+		return c.valueCurve(c.Value())
 	}
 
-	return utils.Clamp(c.Min(), value, c.Max())
+	return c.Value()
 }
 
 // Returns the stringified info of the component

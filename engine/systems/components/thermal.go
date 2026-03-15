@@ -16,7 +16,7 @@ func NewThermalComponent(initial, min, max float64) *Thermal {
 			max,
 			func(x float64) float64 {
 				normalized := (x - min) / (max - min)
-				return (utils.Tanh(normalized, 3.1, 0))*(max-min) + min
+				return (utils.Tanh(normalized, 3.1, 0)+0.015)*(max-min) + min
 			},
 		),
 	}

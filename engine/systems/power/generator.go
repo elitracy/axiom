@@ -3,14 +3,12 @@ package systems
 import (
 	"fmt"
 
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
 )
 
 // TODO: create generator input
 const (
-	minGeneratorTemperature = 0.0
 	maxGeneratorTemperature = 500.0
 	startingPower           = 1.0
 
@@ -39,7 +37,7 @@ func NewGenerator(ambientTemperature float64) *Generator {
 		SystemCore:  systems.NewSystemCore("Generator"),
 		power:       components.NewPowerComponent(startingPower),
 		fuel:        components.NewFuelComponent(startingFuel),
-		temperature: components.NewThermalComponent(ambientTemperature, minGeneratorTemperature, maxGeneratorTemperature),
+		temperature: components.NewThermalComponent(ambientTemperature, ambientTemperature, maxGeneratorTemperature),
 		health:      components.NewHealthComponent(startingHealth),
 	}
 
@@ -63,8 +61,8 @@ func (s *Generator) Tick() {
 	if s.power.ApplyValueCurve() != s.power.Min() {
 		s.fuel.SetValue(s.fuel.Value() - percentFuelUsedPerTick)
 		s.temperature.SetValue(s.temperature.Value() + percentTemperatureRaisedPerTick)
-		logging.Info("temperature change: %v", s.temperature.Value())
-
+	} else {
+		s.temperature.SetValue(s.temperature.Value() - percentTemperatureRaisedPerTick)
 	}
 
 	s.health.SetValue(s.health.Value() - percentHealthLostPerTick)

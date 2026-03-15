@@ -72,11 +72,13 @@ func (c *ComponentCore) Max() float64 { return c.max }
 
 // Returns the current component value on the valueCurve function
 func (c *ComponentCore) ApplyValueCurve() float64 {
+	value := c.Value()
 	if c.valueCurve != nil {
-		return c.valueCurve(c.Value())
+
+		value = c.valueCurve(c.Value())
 	}
 
-	return c.Value()
+	return utils.Clamp(c.Min(), value, c.Max())
 }
 
 // Returns the stringified info of the component

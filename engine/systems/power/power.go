@@ -1,0 +1,101 @@
+package power
+
+import (
+	"fmt"
+
+	"github.com/elias/axiom/engine/materials"
+	"github.com/elias/axiom/engine/systems"
+	"github.com/elias/axiom/engine/systems/components"
+	"github.com/elias/axiom/engine/utils"
+)
+
+// A system that creates power
+type Power interface {
+	systems.System
+	// Returns a readonly reference to the temperature component of the power source
+	Temperature() components.ComponentReader
+	// Returns a readonly reference to the power component of the power source
+	Power() components.ComponentReader
+	// Returns a readonly reference to the fuel component of the power source
+	Fuel() components.ComponentReader
+	// Returns status of the power source
+	Status() systems.Status
+	// Sets the cooling source for the power source
+	// coolingSource is the component assigned as the heat source
+	UpdateCoolingSource(coolingSource components.ComponentReader)
+}
+
+// TODO: create generator input
+const (
+	startingPower  = 1.0
+	startingFuel   = 1.0
+	startingHealth = 1.0
+
+	percentFuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	percentHealthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	percentPowerUsedPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG // NOTE: will be replaced by power output like cooling source
+
+)
+
+type PowerCore struct {
+	*systems.SystemCore
+
+	housingMaterial materials.Metal
+
+	power         components.Component
+	fuel          components.Component
+	temperature   components.Component
+	health        *components.Health
+	coolingSource components.ComponentReader
+}
+
+func (s *PowerCore) Temperature() components.ComponentReader { return s.temperature }
+func (s *PowerCore) Power() components.ComponentReader       { return s.power }
+func (s *PowerCore) Fuel() components.ComponentReader        { return s.fuel }
+func (s *PowerCore) Status() systems.Status                  { return s.health.Status() }
+func (s *PowerCore) UpdateCoolingSource(coolingSource components.ComponentReader) {
+	s.coolingSource = coolingSource
+}
+
+// Updates the component values for the generator
+func (s *PowerCore) Tick() {
+	if s.fuel.Value() <= s.fuel.Min() {
+		s.power.SetNorm(s.power.Norm() - percentPowerUsedPerTick)
+	}
+
+	if s.coolingSource != nil && s.coolingSource.Value() < s.temperature.Value() {
+
+		temperatureDelta := (s.temperature.Norm() - s.coolingSource.Value()/s.temperature.Max())
+		temperatureDelta = utils.Clamp(-s.housingMaterial.ThermalConductivityRate, temperatureDelta, s.housingMaterial.ThermalConductivityRate)
+
+		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	}
+
+	if s.health.Status() == systems.Offline {
+		s.power.SetNorm(0.0)
+	}
+
+	if s.power.Value() != s.power.Min() {
+		s.fuel.SetNorm(s.fuel.Norm() - percentFuelLostPerTick)
+		s.temperature.SetNorm(s.temperature.Norm() + s.housingMaterial.HeatAbsorptionRate)
+	} else {
+		s.temperature.SetNorm(s.temperature.Norm() - s.housingMaterial.HeatAbsorptionRate)
+	}
+
+	if s.temperature.Value() >= s.temperature.Max() {
+		s.health.SetNorm(s.health.Norm() - percentHealthLostPerTick)
+	}
+
+}
+
+// Returns the stringified information for the generator
+func (s *PowerCore) String() string {
+
+	output := fmt.Sprintf("%v: %v", s.ID(), s.Name())
+	output += fmt.Sprintf("\n%s", s.power)
+	output += fmt.Sprintf("\n%s", s.fuel)
+	output += fmt.Sprintf("\n%s", s.temperature)
+	output += fmt.Sprintf("\n%s", s.health)
+
+	return output
+}

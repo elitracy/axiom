@@ -1,0 +1,39 @@
+package materials
+
+import "github.com/elias/axiom/engine/utils"
+
+type Metal struct {
+	Name                    string                // the name of the metal
+	MinTemperature          float64               // the minimum temperature of the metal (C)
+	MaxTemperature          float64               // the minimum temperature of the metal (C)
+	MinPressure             float64               // the minimum pressure of the metal (kPa)
+	MaxPressure             float64               // the maximum pressure of the metal (kPa)
+	HeatAbsorptionRate      float64               // how much heat is absorbed by the metal (C/tick)
+	ThermalConductivityRate float64               // the maximum temperature delta per tick (C/tick)
+	TemperatureCurve        func(float64) float64 // the curve to calculate the applied temperature from the normalized value
+	PressureCurve           func(float64) float64 // the curve to calculate the applied pressure from the normalized value
+}
+
+func NewSteel() Metal {
+	metal := Metal{
+		Name:                    "Steel",
+		MinTemperature:          -29.0,
+		MaxTemperature:          427.0,
+		MinPressure:             1.0,
+		MaxPressure:             800.0,
+		ThermalConductivityRate: 0.01,
+		HeatAbsorptionRate:      0.01,
+	}
+
+	metal.TemperatureCurve = func(x float64) float64 {
+		temp := (utils.Tanh(x, 3.1, 0))*(metal.MaxTemperature-metal.MinTemperature) + metal.MinTemperature
+		return utils.Clamp(metal.MinTemperature, temp, metal.MaxTemperature)
+	}
+
+	metal.PressureCurve = func(x float64) float64 {
+		pressure := utils.Tanh(x, 1.1, 0.3)*(metal.MaxPressure-metal.MinPressure) + metal.MinPressure
+		return utils.Clamp(float64(metal.MinPressure), pressure, float64(metal.MaxPressure))
+	}
+
+	return metal
+}

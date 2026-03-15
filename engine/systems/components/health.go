@@ -19,6 +19,8 @@ func NewHealthComponent(initial float64) *Health {
 		ComponentCore: NewComponent(
 			"Health (%%)",
 			initial,
+			0.0,
+			1.0,
 		),
 	}
 }
@@ -26,13 +28,13 @@ func NewHealthComponent(initial float64) *Health {
 // Returns the Status per the applied value of health
 func (c *Health) Status() systems.Status {
 
-	appliedHealth := c.ApplyValueCurve()
+	normHealth := c.Norm()
 	switch {
-	case appliedHealth <= healthOfflineThreshold:
+	case normHealth <= healthOfflineThreshold:
 		return systems.Offline
-	case appliedHealth <= healthCriticalThreshold:
+	case normHealth <= healthCriticalThreshold:
 		return systems.Critical
-	case appliedHealth <= healthDegradedThreshold:
+	case normHealth <= healthDegradedThreshold:
 		return systems.Degraded
 	default:
 		return systems.Online

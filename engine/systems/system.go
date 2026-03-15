@@ -21,6 +21,7 @@ type System interface {
 	ID() SystemID
 	Name() string
 	String() string
+	Status() Status
 	Tick()
 }
 

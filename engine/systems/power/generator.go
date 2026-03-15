@@ -3,7 +3,6 @@ package systems
 import (
 	"fmt"
 
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
 	"github.com/elias/axiom/engine/utils"
@@ -11,8 +10,6 @@ import (
 
 // TODO: create generator input
 const (
-	ticksTillDeath = 20
-
 	startingPower       = 1.0
 	startingFuel        = 1.0
 	startingHealth      = 1.0
@@ -20,9 +17,9 @@ const (
 
 	maxTemperature = 500.0
 
-	percentFuelLostPerTick          = 1.0 / ticksTillDeath
-	percentTemperatureGainedPerTick = 1.0 / ticksTillDeath
-	percentHealthLostPerTick        = 1.0 / ticksTillDeath
+	percentFuelLostPerTick          = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	percentTemperatureGainedPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	percentHealthLostPerTick        = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 )
 
 // A system that creates power from fuel but generates a lot of heat
@@ -39,15 +36,15 @@ type Generator struct {
 func NewGenerator(ambientTemperature float64) *Generator {
 
 	temperatureCurve := func(x float64) float64 {
-		value := (utils.Tanh(x, 3.1, 0)+0.015)*(maxTemperature-ambientTemperature) + ambientTemperature
-		return utils.Clamp(ambientTemperature, value, maxTemperature)
+		temp := (utils.Tanh(x, 3.1, 0)+0.015)*(maxTemperature-ambientTemperature) + ambientTemperature
+		return utils.Clamp(ambientTemperature, temp, maxTemperature)
 	}
 
 	system := &Generator{
 		SystemCore:  systems.NewSystemCore("Generator"),
-		power:       components.NewComponent("Power", startingPower),
-		fuel:        components.NewComponent("Fuel", startingFuel),
-		temperature: components.NewComponent("Temperature", startingTemperature, temperatureCurve),
+		power:       components.NewComponent("Power (%%)", startingPower),
+		fuel:        components.NewComponent("Fuel (%%)", startingFuel),
+		temperature: components.NewComponent("Temperature (C)", startingTemperature, temperatureCurve),
 		health:      components.NewHealthComponent(startingHealth),
 	}
 

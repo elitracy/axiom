@@ -50,7 +50,10 @@ func (l *logger) run() {
 
 	for msg := range l.queue {
 		timeTick := fmt.Sprintf("%s%s%s", colorGrey, msg.Time.Format("15:04:05.000"), colorReset)
-		log.Printf("%s %v %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, msg.Message, colorReset)
+		parts := strings.Split(msg.Message, "\n")
+		for _, part := range parts {
+			log.Printf("%s %v %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, part, colorReset)
+		}
 	}
 }
 

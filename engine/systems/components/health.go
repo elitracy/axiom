@@ -18,7 +18,7 @@ type Health struct {
 // initial is the initial health of the component,
 func NewHealthComponent(initial float64) *Health {
 	return &Health{
-		ComponentCore: NewComponentCore(
+		ComponentCore: NewComponent(
 			"Health",
 			initial,
 			min_health,

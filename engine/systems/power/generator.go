@@ -5,39 +5,46 @@ import (
 
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
+	"github.com/elias/axiom/engine/utils"
 )
 
 // TODO: create generator input
 const (
-	maxGeneratorTemperature = 500.0
-	startingPower           = 1.0
-
-	startingFuel   = 1.0
 	ticksTillDeath = 20
+
+	maxGeneratorTemperature = 500.0
+
+	startingPower  = 1.0
+	startingFuel   = 1.0
+	startingHealth = 1.0
 
 	percentFuelUsedPerTick          = 1.0 / ticksTillDeath
 	percentTemperatureRaisedPerTick = maxGeneratorTemperature / ticksTillDeath
 	percentHealthLostPerTick        = 1.0 / ticksTillDeath
-
-	startingHealth = 1.0
 )
 
 type Generator struct {
 	*systems.SystemCore
-	power       *components.Power
-	fuel        *components.Fuel
-	temperature *components.Thermal
+	power       components.Component
+	fuel        components.Component
+	temperature components.Component
 	health      *components.Health
 }
 
 // Creates a Generator system.
 // ambientTemperature is the starting temperature of the generator
 func NewGenerator(ambientTemperature float64) *Generator {
+
+	temperatureCurve := func(x float64) float64 {
+		normalized := (x - ambientTemperature) / (maxGeneratorTemperature - ambientTemperature)
+		return (utils.Tanh(normalized, 3.1, 0)+0.015)*(maxGeneratorTemperature-ambientTemperature) + ambientTemperature
+	}
+
 	system := &Generator{
 		SystemCore:  systems.NewSystemCore("Generator"),
-		power:       components.NewPowerComponent(startingPower),
-		fuel:        components.NewFuelComponent(startingFuel),
-		temperature: components.NewThermalComponent(ambientTemperature, ambientTemperature, maxGeneratorTemperature),
+		power:       components.NewComponent("Power", startingPower, 0.0, 1.0),
+		fuel:        components.NewComponent("Fuel", startingFuel, 0.0, 1.0),
+		temperature: components.NewComponent("Temperature", ambientTemperature, ambientTemperature, maxGeneratorTemperature, temperatureCurve),
 		health:      components.NewHealthComponent(startingHealth),
 	}
 

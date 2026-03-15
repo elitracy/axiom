@@ -17,7 +17,7 @@ type Component interface {
 	SetValue(float64)
 	Min() float64
 	Max() float64
-	ApplyCurve(float64) float64
+	ApplyValueCurve() float64
 	String() string
 }
 
@@ -33,7 +33,7 @@ type ComponentCore struct {
 
 // Creates a new component
 // value is the starting value for the component, min is the minimum value, max is the maximum value, valueCurve is the function to calcuate the current value
-func NewComponentCore(name string, value, min, max float64, valueCurve ...func(float64) float64) *ComponentCore {
+func NewComponent(name string, value, min, max float64, valueCurve ...func(float64) float64) *ComponentCore {
 
 	var curve func(float64) float64
 	if len(valueCurve) > 0 {

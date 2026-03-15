@@ -8,12 +8,12 @@ import (
 )
 
 func main() {
+	startTick := engine.NewTick()
+	logging.Init("logging/logs/debug.log", startTick)
+
 	world := &simulation.WorldState{}
 	world.AddSystem(systems.NewGenerator(25.0))
-	logging.NewLogger("logging/logs/debug.log")
 
-	tick := engine.NewTick(0)
-	logging.SetTick(tick)
-	engine.RunGame(world, tick)
+	engine.RunGame(world, startTick)
 
 }

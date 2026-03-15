@@ -23,20 +23,20 @@ const (
 
 type LogMessage struct {
 	Time     time.Time
-	Tick     engine.Tick
+	Tick     int64
 	Color    string
 	Level    string
 	Filename string
 	Message  string
 }
 
-type Logger struct {
+type logger struct {
 	queue    chan LogMessage
 	filepath string
 	tick     *engine.Tick
 }
 
-func (l *Logger) run() {
+func (l *logger) run() {
 	log.SetOutput(
 		&lumberjack.Logger{
 			Filename:   l.filepath,
@@ -54,17 +54,18 @@ func (l *Logger) run() {
 	}
 }
 
-func NewLogger(filepath string) *Logger {
-	l := &Logger{
+func Init(filepath string, tick *engine.Tick) {
+	l := &logger{
 		queue:    make(chan LogMessage, 10),
 		filepath: filepath,
+		tick:     tick,
 	}
 
 	go l.run()
-	return l
+	_logger = l
 }
 
-func (l *Logger) log(level, color, format string, args ...any) {
+func (l *logger) log(level, color, format string, args ...any) {
 	_, file, _, ok := runtime.Caller(2)
 	fileName := "UNKNOWN"
 	if ok {
@@ -72,9 +73,9 @@ func (l *Logger) log(level, color, format string, args ...any) {
 	}
 
 	msg := fmt.Sprintf(format, args...)
-	logger.queue <- LogMessage{
+	l.queue <- LogMessage{
 		Time:     time.Now(),
-		Tick:     *l.tick,
+		Tick:     l.tick.Tick(),
 		Level:    level,
 		Filename: fileName,
 		Message:  msg,
@@ -82,21 +83,17 @@ func (l *Logger) log(level, color, format string, args ...any) {
 	}
 }
 
-var logger *Logger
+var _logger *logger
 
 func Info(format string, args ...any) {
-	logger.log("TELEMETRY", colorReset, format, args...)
+	_logger.log("TELEMETRY", colorReset, format, args...)
 }
 func Error(format string, args ...any) {
-	logger.log("FAULT", colorRed, format, args...)
+	_logger.log("FAULT", colorRed, format, args...)
 }
 func Warn(format string, args ...any) {
-	logger.log("WARN", colorYellow, format, args...)
+	_logger.log("WARN", colorYellow, format, args...)
 }
 func Ok(format string, args ...any) {
-	logger.log("STABLE", colorGreen, format, args...)
+	_logger.log("STABLE", colorGreen, format, args...)
 }
-
-func SetTick(tick *engine.Tick) { logger.tick = tick }
-
-func init() { logger = NewLogger("logs/debug.log") }

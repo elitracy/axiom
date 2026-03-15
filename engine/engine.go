@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -9,22 +10,21 @@ const (
 )
 
 type Tick struct {
-	tick int64
+	tick atomic.Int64
 }
 
-func (t *Tick) Tick() int64 { return t.tick }
+func (t *Tick) Tick() int64 { return t.tick.Load() }
 
-func NewTick(startTick int64) *Tick { return &Tick{tick: startTick} }
+func NewTick() *Tick { return &Tick{tick: atomic.Int64{}} }
 
 type Game interface {
-	Update(tick Tick)
+	Update(tick *Tick)
 }
 
 func RunGame(game Game, startTick *Tick) {
-	tick := startTick
 	for {
-		game.Update(*tick)
-		tick.tick++
+		game.Update(startTick)
+		startTick.tick.Add(1)
 		time.Sleep(TICK_SLEEP)
 	}
 

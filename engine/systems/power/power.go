@@ -9,20 +9,31 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
+type PowerInput struct {
+	CoolantTemperature float64
+	AmbientTemperature float64
+}
+
+type PowerOutput struct {
+	Power       float64
+	Temperature float64
+}
+
 // A system that creates power
 type Power interface {
 	systems.System
-	// Returns a readonly reference to the temperature component of the power source
+	// Returns a readonly reference to the temperature component of the power source.
 	Temperature() components.ComponentReader
-	// Returns a readonly reference to the power component of the power source
+	// Returns a readonly reference to the power component of the power source.
 	Power() components.ComponentReader
-	// Returns a readonly reference to the fuel component of the power source
+	// Returns a readonly reference to the fuel component of the power source.
 	Fuel() components.ComponentReader
-	// Returns status of the power source
+	// Returns status of the power source.
 	Status() systems.Status
-	// Sets the cooling source for the power source
-	// coolingSource is the component assigned as the heat source
-	UpdateCoolingSource(coolingSource components.ComponentReader)
+	// Updates the power system.
+	// Returns relavant info about the system.
+	// input is the power inputs for the update.
+	Tick(input PowerInput) PowerOutput
 }
 
 // TODO: create generator input
@@ -42,30 +53,25 @@ type PowerCore struct {
 
 	housingMaterial materials.Metal
 
-	power         components.Component
-	fuel          components.Component
-	temperature   components.Component
-	health        *components.Health
-	coolingSource components.ComponentReader
+	power       components.Component
+	fuel        components.Component
+	temperature components.Component
+	health      *components.Health
 }
 
 func (s *PowerCore) Temperature() components.ComponentReader { return s.temperature }
 func (s *PowerCore) Power() components.ComponentReader       { return s.power }
 func (s *PowerCore) Fuel() components.ComponentReader        { return s.fuel }
 func (s *PowerCore) Status() systems.Status                  { return s.health.Status() }
-func (s *PowerCore) UpdateCoolingSource(coolingSource components.ComponentReader) {
-	s.coolingSource = coolingSource
-}
 
 // Updates the component values for the generator
-func (s *PowerCore) Tick() {
+func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 	if s.fuel.Value() <= s.fuel.Min() {
 		s.power.SetNorm(s.power.Norm() - percentPowerUsedPerTick)
 	}
 
-	if s.coolingSource != nil && s.coolingSource.Value() < s.temperature.Value() {
-
-		temperatureDelta := (s.temperature.Norm() - s.coolingSource.Value()/s.temperature.Max())
+	if input.CoolantTemperature < s.temperature.Value() {
+		temperatureDelta := (s.temperature.Norm() - input.CoolantTemperature/s.temperature.Max())
 		temperatureDelta = utils.Clamp(-s.housingMaterial.ThermalConductivityRate, temperatureDelta, s.housingMaterial.ThermalConductivityRate)
 
 		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
@@ -75,10 +81,12 @@ func (s *PowerCore) Tick() {
 		s.power.SetNorm(0.0)
 	}
 
-	if s.power.Value() != s.power.Min() {
+	if s.power.Value() > s.power.Min() {
 		s.fuel.SetNorm(s.fuel.Norm() - percentFuelLostPerTick)
 		s.temperature.SetNorm(s.temperature.Norm() + s.housingMaterial.HeatAbsorptionRate)
-	} else {
+	}
+
+	if s.power.Value() <= s.power.Min() && s.temperature.Value() > input.AmbientTemperature {
 		s.temperature.SetNorm(s.temperature.Norm() - s.housingMaterial.HeatAbsorptionRate)
 	}
 
@@ -86,6 +94,12 @@ func (s *PowerCore) Tick() {
 		s.health.SetNorm(s.health.Norm() - percentHealthLostPerTick)
 	}
 
+	output := PowerOutput{
+		Power:       s.power.Value(),
+		Temperature: s.temperature.Value(),
+	}
+
+	return output
 }
 
 // Returns the stringified information for the generator

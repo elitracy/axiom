@@ -1,7 +1,7 @@
 package systems
 
 const (
-	TICKS_TILL_DEATH_DEBUG = 100
+	TICKS_TILL_DEATH_DEBUG = 10
 )
 
 type Status int8
@@ -22,7 +22,6 @@ type System interface {
 	Name() string
 	String() string
 	Status() Status
-	Tick()
 }
 
 type SystemCore struct {

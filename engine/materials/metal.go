@@ -26,13 +26,11 @@ func NewSteel() Metal {
 	}
 
 	metal.TemperatureCurve = func(x float64) float64 {
-		temp := (utils.Tanh(x, 3.1, 0))*(metal.MaxTemperature-metal.MinTemperature) + metal.MinTemperature
-		return utils.Clamp(metal.MinTemperature, temp, metal.MaxTemperature)
+		return utils.Tanh(x, 3.1, 0)
 	}
 
 	metal.PressureCurve = func(x float64) float64 {
-		pressure := utils.Tanh(x, 1.1, 0.3)*(metal.MaxPressure-metal.MinPressure) + metal.MinPressure
-		return utils.Clamp(float64(metal.MinPressure), pressure, float64(metal.MaxPressure))
+		return utils.Tanh(x, 1.1, 0.3)
 	}
 
 	return metal

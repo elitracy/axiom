@@ -28,13 +28,11 @@ func NewWater() Fluid {
 	}
 
 	fluid.TemperatureCurve = func(x float64) float64 {
-		temp := (utils.Tanh(x, 3.1, 0)+0.015)*(fluid.MaxTemperature-fluid.MinTemperature) + fluid.MinTemperature
-		return utils.Clamp(fluid.MinTemperature, temp, fluid.MaxTemperature)
+		return utils.Tanh(x, 3.1, 0) + 0.015
 	}
 
 	fluid.ViscosityCurve = func(x float64) float64 {
-		viscosity := (1-utils.Tanh(x, 4.2, 0))*(fluid.MaxViscosity-fluid.MinViscosity) + fluid.MinViscosity
-		return utils.Clamp(fluid.MinViscosity, viscosity, fluid.MaxViscosity)
+		return 1 - utils.Tanh(x, 4.2, 0)
 	}
 
 	return fluid
@@ -54,13 +52,11 @@ func NewPropyleneGlycol() Fluid {
 	}
 
 	fluid.TemperatureCurve = func(x float64) float64 {
-		temp := (utils.Tanh(x, 3.1, 0)+0.015)*(fluid.MaxTemperature-fluid.MinTemperature) + fluid.MinTemperature
-		return utils.Clamp(fluid.MinTemperature, temp, fluid.MaxTemperature)
+		return utils.Tanh(x, 3.1, 0) + 0.015
 	}
 
 	fluid.ViscosityCurve = func(x float64) float64 {
-		viscosity := (1-utils.Tanh(x, 10.0, 0))*(fluid.MaxViscosity-fluid.MinViscosity) + fluid.MinViscosity
-		return utils.Clamp(fluid.MinViscosity, viscosity, fluid.MaxViscosity)
+		return 1 - utils.Tanh(x, 10.0, 0)
 	}
 
 	return fluid

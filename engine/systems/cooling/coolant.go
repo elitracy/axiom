@@ -14,13 +14,22 @@ const (
 	volumeLossPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 )
 
+type CoolantInput struct {
+	LoadTemperature float64
+}
+
+type CoolantOutput struct {
+	Temperature float64
+}
+
 type Coolant interface {
 	systems.System
 	// Returns a readonly reference to the temperature component of the coolant
 	Temperature() components.ComponentReader
-	// Sets the heat source for the power source
-	// Heat source is the component assigned as the heat source
-	UpdateHeatSource(heatSource components.ComponentReader)
+	// Updates the coolant system.
+	// Returns relavant info about the system.
+	// input is the coolant inputs for the update.
+	Tick(input CoolantInput) CoolantOutput
 }
 
 // A cooling loop wraps the heat source and offsets the heat using the fluid contained
@@ -35,8 +44,6 @@ type CoolantCore struct {
 	viscosity   components.Component
 	pressure    components.Component
 	health      *components.Health
-
-	heatSource components.ComponentReader
 }
 
 func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *CoolantCore {
@@ -57,20 +64,17 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 
 func (s *CoolantCore) Temperature() components.ComponentReader { return s.temperature }
 func (s *CoolantCore) Status() systems.Status                  { return s.health.Status() }
-func (s *CoolantCore) UpdateHeatSource(heatSource components.ComponentReader) {
-	s.heatSource = heatSource
-}
 
-func (s *CoolantCore) Tick() {
+func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
 	flowRate := 0.0
 	if s.viscosity.Norm() > 0 {
-		flowRate = s.pressure.Norm() / s.viscosity.Norm() * s.volume.Norm()
+		flowRate = s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
 	}
 
 	cooling := flowRate * s.coolantFluid.HeatAbsorptionRate
-	temperatureDelta := s.heatSource.Value()/s.temperature.Max() - cooling
+	temperatureDelta := input.LoadTemperature/s.temperature.Max() - cooling
 	temperatureDelta = utils.Clamp(-s.coolantFluid.ThermalConductivityRate, temperatureDelta, s.coolantFluid.ThermalConductivityRate)
 
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
@@ -85,6 +89,12 @@ func (s *CoolantCore) Tick() {
 	if s.pressure.Value() >= s.pressure.Max() {
 		s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 	}
+
+	output := CoolantOutput{
+		Temperature: s.temperature.Value(),
+	}
+
+	return output
 }
 
 func (s *CoolantCore) String() string {

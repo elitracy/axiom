@@ -87,11 +87,12 @@ func (c *ComponentCore) SetNorm(normValue float64) {
 		c.value = normValue
 	}
 
+	c.value = c.value*(c.Max()-c.Min()) + c.Min()
 	c.value = utils.Clamp(c.min, c.value, c.max)
 }
 
 // Returns the stringified info of the component
 func (c *ComponentCore) String() string {
-	output := fmt.Sprintf("%d: %s %.2f (%.0f%%)", c.ID().id, c.Name(), c.Value(), c.Norm()*100)
+	output := fmt.Sprintf("%d: %s %.3f (%.2f%%)", c.ID().id, c.Name(), c.Value(), c.Norm()*100)
 	return output
 }

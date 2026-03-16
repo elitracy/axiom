@@ -17,7 +17,7 @@ type Health struct {
 func NewHealthComponent(initial float64) *Health {
 	return &Health{
 		ComponentCore: NewComponent(
-			"Health (%%)",
+			"Health (%)",
 			initial,
 			0.0,
 			1.0,

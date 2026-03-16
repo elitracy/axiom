@@ -81,10 +81,10 @@ func (c *ComponentCore) Norm() float64 { return c.normValue }
 // Sets the components applied value with a normalized value
 func (c *ComponentCore) SetNorm(normValue float64) {
 	c.normValue = utils.Clamp(0.0, normValue, 1.0)
+
+	c.value = normValue
 	if c.curve != nil {
 		c.value = c.curve(normValue)
-	} else {
-		c.value = normValue
 	}
 
 	c.value = c.value*(c.Max()-c.Min()) + c.Min()

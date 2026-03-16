@@ -14,7 +14,7 @@ const (
 )
 
 type SystemID struct {
-	id int
+	ID int
 }
 
 type System interface {
@@ -34,7 +34,7 @@ type SystemCore struct {
 func NewSystemCore(name string) *SystemCore {
 	return &SystemCore{
 		// TODO: generate system IDs dynamically
-		id:   SystemID{id: 0},
+		id:   SystemID{ID: 0},
 		name: name,
 	}
 }

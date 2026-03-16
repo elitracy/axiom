@@ -2,6 +2,7 @@ package cooling
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/elias/axiom/engine/materials"
 	"github.com/elias/axiom/engine/systems"
@@ -24,8 +25,6 @@ type CoolantOutput struct {
 
 type Coolant interface {
 	systems.System
-	// Returns a readonly reference to the temperature component of the coolant
-	Temperature() components.ComponentReader
 	// Updates the coolant system.
 	// Returns relavant info about the system.
 	// input is the coolant inputs for the update.
@@ -51,9 +50,9 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 	system := &CoolantCore{
 		SystemCore:   systems.NewSystemCore("Cooling Loop"),
 		volume:       components.NewComponent("Volume (%)", 1.0, 0.0, 1.0),
-		temperature:  components.NewComponent("Temperature (C)", coolantFluid.MinTemperature, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
-		viscosity:    components.NewComponent("Viscosity (cP)", coolantFluid.MinViscosity, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
-		pressure:     components.NewComponent("Pressure (kPa)", pipeMetal.MinPressure, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
+		temperature:  components.NewComponent("Temperature (C)", 0.0, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
+		viscosity:    components.NewComponent("Viscosity (cP)", 0.0, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
+		pressure:     components.NewComponent("Pressure (kPa)", 0.0, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
 		health:       components.NewHealthComponent(1.0),
 		coolantFluid: coolantFluid,
 		pipeMetal:    pipeMetal,
@@ -62,8 +61,7 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 	return system
 }
 
-func (s *CoolantCore) Temperature() components.ComponentReader { return s.temperature }
-func (s *CoolantCore) Status() systems.Status                  { return s.health.Status() }
+func (s *CoolantCore) Status() systems.Status { return s.health.Status() }
 
 func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
@@ -75,7 +73,9 @@ func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 
 	cooling := flowRate * s.coolantFluid.HeatAbsorptionRate
 	temperatureDelta := input.LoadTemperature/s.temperature.Max() - cooling
+	log.Printf("temperature delta : %v", temperatureDelta)
 	temperatureDelta = utils.Clamp(-s.coolantFluid.ThermalConductivityRate, temperatureDelta, s.coolantFluid.ThermalConductivityRate)
+	log.Printf("temperature delta clamped: %v", temperatureDelta)
 
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
 

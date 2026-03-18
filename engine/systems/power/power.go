@@ -72,7 +72,7 @@ func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 
 	if input.CoolantTemperature < s.temperature.Value() {
 		temperatureDelta := (s.temperature.Norm() - input.CoolantTemperature/s.temperature.Max())
-		temperatureDelta = utils.Clamp(-s.housingMaterial.ThermalConductivityRate, temperatureDelta, s.housingMaterial.ThermalConductivityRate)
+		temperatureDelta = utils.Clamp(-s.housingMaterial.MaxTemperatureDelta, temperatureDelta, s.housingMaterial.MaxTemperatureDelta)
 
 		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
 	}

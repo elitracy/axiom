@@ -51,12 +51,15 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 		SystemCore:   systems.NewSystemCore("Cooling Loop"),
 		volume:       components.NewComponent("Volume (%)", 1.0, 0.0, 1.0),
 		temperature:  components.NewComponent("Temperature (C)", 0.0, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
-		viscosity:    components.NewComponent("Viscosity (cP)", 0.0, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
-		pressure:     components.NewComponent("Pressure (kPa)", 0.0, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
+		viscosity:    components.NewComponent("Viscosity (cP)", 0.5, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
+		pressure:     components.NewComponent("Pressure (kPa)", 0.5, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
 		health:       components.NewHealthComponent(1.0),
 		coolantFluid: coolantFluid,
 		pipeMetal:    pipeMetal,
 	}
+
+	system.viscosity.SetNorm(1 - system.temperature.Norm())
+	system.pressure.SetNorm(system.volume.Norm() * system.temperature.Norm() * system.coolantFluid.ThermalExpansionRate)
 
 	return system
 }
@@ -66,25 +69,32 @@ func (s *CoolantCore) Status() systems.Status { return s.health.Status() }
 func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
-	flowRate := 0.0
+	flow := 0.0
 	if s.viscosity.Norm() > 0 {
-		flowRate = s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
+		flow = s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
 	}
+	log.Printf("FLOW: %.2f", flow)
 
-	cooling := flowRate * s.coolantFluid.HeatAbsorptionRate
-	temperatureDelta := input.LoadTemperature/s.temperature.Max() - cooling
-	log.Printf("temperature delta : %v", temperatureDelta)
-	temperatureDelta = utils.Clamp(-s.coolantFluid.ThermalConductivityRate, temperatureDelta, s.coolantFluid.ThermalConductivityRate)
-	log.Printf("temperature delta clamped: %v", temperatureDelta)
+	cooling := flow * s.coolantFluid.HeatAbsorptionRate
+	log.Printf("COOLING: %.2f", cooling)
+
+	normalizeLoad := input.LoadTemperature / s.temperature.Max()
+	log.Printf("NORM LOAD: %.2f", normalizeLoad)
+
+	temperatureDelta := normalizeLoad - cooling
+	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
+
+	log.Printf("DELTA: %.2f", temperatureDelta)
 
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	log.Printf("TEMP: %.2f", s.temperature.Value())
 
 	if s.temperature.Value() >= s.temperature.Max() {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)
 	}
 
-	s.viscosity.SetNorm(1 - s.temperature.Norm())
-	s.pressure.SetNorm(s.volume.Norm() * s.temperature.Norm() * s.coolantFluid.ThermalExpansionRate)
+	s.viscosity.SetNorm(s.calculateViscosity())
+	s.pressure.SetNorm(s.calculatePressure())
 
 	if s.pressure.Value() >= s.pressure.Max() {
 		s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
@@ -106,4 +116,13 @@ func (s *CoolantCore) String() string {
 	output += fmt.Sprintf("\n%s", s.health)
 
 	return output
+}
+
+func (s *CoolantCore) calculateViscosity() float64 {
+	return 1 - s.temperature.Norm()
+}
+
+func (s *CoolantCore) calculatePressure() float64 {
+	pressure := s.volume.Norm() * s.temperature.Norm() * s.coolantFluid.ThermalExpansionRate
+	return pressure
 }

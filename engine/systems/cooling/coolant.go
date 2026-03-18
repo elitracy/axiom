@@ -2,7 +2,6 @@ package cooling
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/elias/axiom/engine/materials"
 	"github.com/elias/axiom/engine/systems"
@@ -79,23 +78,15 @@ func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
 	flow := s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
-	log.Printf("FLOW: %.2f", flow)
-	log.Printf("Pressure: %.2f", s.pressure.Norm())
-	log.Printf("Viscosity: %.2f", s.viscosity.Norm())
 
 	percentHeatAbsorbed := flow * s.coolantFluid.HeatAbsorptionRate
-	log.Printf("COOLING: %.2f", percentHeatAbsorbed)
 
 	normalizeLoad := input.LoadTemperature / s.temperature.Max()
-	log.Printf("NORM LOAD: %.2f", normalizeLoad)
 
 	temperatureDelta := normalizeLoad * percentHeatAbsorbed
 	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
 
-	log.Printf("DELTA: %.2f", temperatureDelta)
-
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
-	log.Printf("TEMP: %.2f", s.temperature.Value())
 
 	if s.temperature.Value() >= s.temperature.Max() {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)

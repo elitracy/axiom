@@ -2,7 +2,6 @@ package cooling
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/elias/axiom/engine/materials"
 	"github.com/elias/axiom/engine/systems"
@@ -13,12 +12,16 @@ import (
 const (
 	healthDecayPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 	volumeLossPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+
+	basePressure = 0.05
 )
 
+// The input to the coolant tick function
 type CoolantInput struct {
 	LoadTemperature float64
 }
 
+// The output of the coolant tick function
 type CoolantOutput struct {
 	Temperature float64
 }
@@ -43,23 +46,28 @@ type CoolantCore struct {
 	viscosity   components.Component
 	pressure    components.Component
 	health      *components.Health
+
+	basePressure float64
 }
 
+// Creates a new coolant loop
 func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *CoolantCore {
 
 	system := &CoolantCore{
 		SystemCore:   systems.NewSystemCore("Cooling Loop"),
 		volume:       components.NewComponent("Volume (%)", 1.0, 0.0, 1.0),
 		temperature:  components.NewComponent("Temperature (C)", 0.0, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
-		viscosity:    components.NewComponent("Viscosity (cP)", 0.5, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
-		pressure:     components.NewComponent("Pressure (kPa)", 0.5, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
+		viscosity:    components.NewComponent("Viscosity (cP)", 0.0, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
+		pressure:     components.NewComponent("Pressure (kPa)", 0.0, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
 		health:       components.NewHealthComponent(1.0),
 		coolantFluid: coolantFluid,
 		pipeMetal:    pipeMetal,
+
+		basePressure: basePressure,
 	}
 
-	system.viscosity.SetNorm(1 - system.temperature.Norm())
-	system.pressure.SetNorm(system.volume.Norm() * system.temperature.Norm() * system.coolantFluid.ThermalExpansionRate)
+	system.viscosity.SetNorm(system.calculateViscosityNorm())
+	system.pressure.SetNorm(system.calculatePressureNorm())
 
 	return system
 }
@@ -69,32 +77,23 @@ func (s *CoolantCore) Status() systems.Status { return s.health.Status() }
 func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
-	flow := 0.0
-	if s.viscosity.Norm() > 0 {
-		flow = s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
-	}
-	log.Printf("FLOW: %.2f", flow)
+	flow := s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
 
-	cooling := flow * s.coolantFluid.HeatAbsorptionRate
-	log.Printf("COOLING: %.2f", cooling)
+	percentHeatAbsorbed := flow * s.coolantFluid.HeatAbsorptionRate
 
 	normalizeLoad := input.LoadTemperature / s.temperature.Max()
-	log.Printf("NORM LOAD: %.2f", normalizeLoad)
 
-	temperatureDelta := normalizeLoad - cooling
+	temperatureDelta := normalizeLoad * percentHeatAbsorbed
 	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
 
-	log.Printf("DELTA: %.2f", temperatureDelta)
-
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
-	log.Printf("TEMP: %.2f", s.temperature.Value())
 
 	if s.temperature.Value() >= s.temperature.Max() {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)
 	}
 
-	s.viscosity.SetNorm(s.calculateViscosity())
-	s.pressure.SetNorm(s.calculatePressure())
+	s.viscosity.SetNorm(s.calculateViscosityNorm())
+	s.pressure.SetNorm(s.calculatePressureNorm())
 
 	if s.pressure.Value() >= s.pressure.Max() {
 		s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
@@ -118,11 +117,16 @@ func (s *CoolantCore) String() string {
 	return output
 }
 
-func (s *CoolantCore) calculateViscosity() float64 {
-	return 1 - s.temperature.Norm()
+func (s *CoolantCore) calculateViscosityNorm() float64 {
+	viscosity := 1 - s.temperature.Norm()
+	viscosity = utils.Clamp(0.0, viscosity, 1.0)
+
+	return viscosity
 }
 
-func (s *CoolantCore) calculatePressure() float64 {
-	pressure := s.volume.Norm() * s.temperature.Norm() * s.coolantFluid.ThermalExpansionRate
+func (s *CoolantCore) calculatePressureNorm() float64 {
+	pressure := s.basePressure + s.volume.Norm()*s.temperature.Norm()*s.coolantFluid.ThermalExpansionRate
+	pressure = utils.Clamp(0.0, pressure, 1.0)
+
 	return pressure
 }

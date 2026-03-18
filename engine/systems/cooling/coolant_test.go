@@ -27,7 +27,7 @@ func testMetal() materials.Metal {
 		Name:                "Test Metal",
 		MinTemperature:      0.0,
 		MaxTemperature:      100.0,
-		MinPressure:         1.0,
+		MinPressure:         0.0,
 		MaxPressure:         100.0,
 		HeatAbsorptionRate:  0.005,
 		MaxTemperatureDelta: 0.01,
@@ -58,37 +58,60 @@ func TestCoolant_CalculatePressureTemperature(t *testing.T) {
 	fluid := testFluid()
 	fluid.ThermalExpansionRate = 1
 	coolant := NewCoolantLoop(fluid, testMetal())
+	coolant.basePressure = 0.0
 
-	pressure := coolant.calculatePressure()
+	pressure := coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 0.0)
 
 	coolant.temperature.SetNorm(0.5)
-	pressure = coolant.calculatePressure()
+	pressure = coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 0.5)
 
 	coolant.temperature.SetNorm(1.0)
-	pressure = coolant.calculatePressure()
+	pressure = coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 1.0)
 }
 
 func TestCoolant_CalculatePressureExpansion(t *testing.T) {
 	fluid := testFluid()
-	fluid.ThermalExpansionRate = 1.0
+	fluid.ThermalExpansionRate = 0.0
 	coolant := NewCoolantLoop(fluid, testMetal())
+	coolant.basePressure = 0.0
 	coolant.temperature.SetNorm(1.0)
 
-	pressure := coolant.calculatePressure()
+	pressure := coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 0.0)
 
 	fluid.ThermalExpansionRate = 0.5
 	coolant = NewCoolantLoop(fluid, testMetal())
-	pressure = coolant.calculatePressure()
+	coolant.basePressure = 0.0
+	coolant.temperature.SetNorm(1.0)
+	pressure = coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 0.5)
 
 	fluid.ThermalExpansionRate = 1.0
 	coolant = NewCoolantLoop(fluid, testMetal())
-	pressure = coolant.calculatePressure()
+	coolant.basePressure = 0.0
+	coolant.temperature.SetNorm(1.0)
+	pressure = coolant.calculatePressureNorm()
 	assert.Equal(t, pressure, 1.0)
+}
+
+func TestCoolant_CalculateViscosity(t *testing.T) {
+	fluid := testFluid()
+	coolant := NewCoolantLoop(fluid, testMetal())
+
+	coolant.temperature.SetNorm(1.0)
+	viscosity := coolant.calculateViscosityNorm()
+	assert.Equal(t, viscosity, 0.0)
+
+	coolant.temperature.SetNorm(0.5)
+	viscosity = coolant.calculateViscosityNorm()
+	assert.Equal(t, viscosity, 0.5)
+
+	coolant.temperature.SetNorm(0.0)
+	viscosity = coolant.calculateViscosityNorm()
+	assert.Equal(t, viscosity, 1.0)
 }
 
 func TestCoolant_NoTemperatureDelta(t *testing.T) {
@@ -103,20 +126,6 @@ func TestCoolant_NoTemperatureDelta(t *testing.T) {
 	}
 
 	assert.Equal(t, math.Round(output.Temperature), 0.0)
-}
-
-func TestCoolant_HighTemperatureDelta(t *testing.T) {
-	fluid := testFluid()
-	fluid.MaxTemperatureDelta = 0.5
-
-	coolant := NewCoolantLoop(fluid, testMetal())
-
-	output := coolant.Tick(testInput)
-
-	assert.Equal(t, math.Round(output.Temperature), 50.0)
-
-	output = coolant.Tick(testInput)
-	assert.Equal(t, math.Round(output.Temperature), 100.0)
 }
 
 func TestCoolant_LowTemperatureDelta(t *testing.T) {
@@ -138,59 +147,66 @@ func TestCoolant_LowTemperatureDelta(t *testing.T) {
 	assert.Equal(t, math.Round(output.Temperature), 10.0)
 }
 
-func TestCoolant_NoHeatAbsorption(t *testing.T) {
+func TestCoolant_HighTemperatureDelta(t *testing.T) {
 	fluid := testFluid()
-	fluid.HeatAbsorptionRate = 0.0
+	fluid.MaxTemperatureDelta = 0.5
 
 	coolant := NewCoolantLoop(fluid, testMetal())
 
-	var output CoolantOutput
-	for range 10 {
-		output = coolant.Tick(testInput)
-	}
+	output := coolant.Tick(testInput)
+
+	assert.Equal(t, math.Round(output.Temperature), 50.0)
+
+	output = coolant.Tick(testInput)
+	assert.Equal(t, math.Round(output.Temperature), 100.0)
+}
+
+func TestCoolant_NoHeatAbsorptionRate(t *testing.T) {
+	fluid := testFluid()
+	fluid.HeatAbsorptionRate = 0.0
+	fluid.MaxTemperatureDelta = 1.0
+
+	coolant := NewCoolantLoop(fluid, testMetal())
+
+	output := coolant.Tick(testInput)
 
 	assert.Equal(t, math.Round(output.Temperature), 0.0)
 }
 
-func TestCoolant_HighHeatAbsorption(t *testing.T) {
+func TestCoolant_LowHeatAbsorptionRate(t *testing.T) {
 	fluid := testFluid()
-	fluid.HeatAbsorptionRate = 0.01
-
-	input := CoolantInput{LoadTemperature: 5.0}
+	fluid.HeatAbsorptionRate = 0.2
+	fluid.MaxTemperatureDelta = 1.0
+	fluid.ThermalExpansionRate = 1.0
 
 	coolant := NewCoolantLoop(fluid, testMetal())
+	coolant.temperature.SetNorm(0.0)
+	coolant.viscosity.SetNorm(0.0)
+	coolant.pressure.SetNorm(1.0)
 
-	var output CoolantOutput
-	for range 5 {
-		output = coolant.Tick(input)
+	var testInput = CoolantInput{
+		LoadTemperature: 100.0,
 	}
+	output := coolant.Tick(testInput)
 
-	assert.Equal(t, math.Round(output.Temperature), 25.00)
-
-	for range 5 {
-		output = coolant.Tick(input)
-	}
-
-	assert.Equal(t, math.Round(output.Temperature), 50.00)
+	assert.Equal(t, math.Round(output.Temperature), 20.0)
 }
 
-func TestCoolant_LowHeatAbsorption(t *testing.T) {
+func TestCoolant_HighHeatAbsorptionRate(t *testing.T) {
 	fluid := testFluid()
-	fluid.HeatAbsorptionRate = 0.01
+	fluid.HeatAbsorptionRate = 1.0
+	fluid.MaxTemperatureDelta = 1.0
+	fluid.ThermalExpansionRate = 1.0
 
-	input := CoolantInput{LoadTemperature: 5.0}
 	coolant := NewCoolantLoop(fluid, testMetal())
+	coolant.temperature.SetNorm(0.0)
+	coolant.viscosity.SetNorm(0.0)
+	coolant.pressure.SetNorm(1.0)
 
-	var output CoolantOutput
-	for range 5 {
-		output = coolant.Tick(input)
+	var testInput = CoolantInput{
+		LoadTemperature: 100.0,
 	}
+	output := coolant.Tick(testInput)
 
-	assert.Equal(t, output.Temperature, 0.05)
-
-	for range 5 {
-		output = coolant.Tick(input)
-	}
-
-	assert.Equal(t, output.Temperature, 0.10)
+	assert.Equal(t, math.Round(output.Temperature), 100.0)
 }

@@ -31,6 +31,7 @@ func testPower(metal materials.Metal) *PowerCore {
 		temperature:        components.NewComponent("Temperature", 0.0, metal.MinTemperature, metal.MaxTemperature),
 		health:             components.NewHealthComponent(1.0),
 		heatGenerationRate: 0.01,
+		powerGrowthRate:    0.0,
 	}
 
 	return power
@@ -52,7 +53,7 @@ func TestPower_NoFuelLosesPower(t *testing.T) {
 	power.Tick(testInput())
 
 	assert.Equal(t, power.fuel.Norm(), 0.0)
-	assert.Equal(t, power.power.Norm(), 1.0-1.0/systems.TICKS_TILL_DEATH_DEBUG)
+	assert.Equal(t, power.power.Norm(), 1.0-power.powerGrowthRate)
 
 }
 
@@ -93,7 +94,7 @@ func TestPower_HighTemperatureDegradesHealth(t *testing.T) {
 
 	power.Tick(testInput())
 
-	assert.Equal(t, power.health.Norm(), 1.0-percentHealthLostPerTick)
+	assert.Equal(t, power.health.Norm(), 1.0-healthLostPerTick)
 }
 
 func TestPower_NoHealthNoPower(t *testing.T) {
@@ -145,5 +146,36 @@ func TestPower_ProducingPowerUsesFuel(t *testing.T) {
 
 	power.Tick(testInput())
 
-	assert.Equal(t, power.fuel.Norm(), 1.0-percentFuelLostPerTick)
+	assert.Equal(t, power.fuel.Norm(), 1.0-fuelLostPerTick)
+}
+func TestPower_TickOutputTemperature(t *testing.T) {
+	testMetal := testMetal()
+	testMetal.HeatAbsorptionRate = 0.0
+	testMetal.MaxTemperatureDelta = 1.0
+
+	power := testPower(testMetal)
+	power.temperature.SetNorm(0.0)
+	power.heatGenerationRate = 0.5
+
+	testInput := PowerInput{
+		AmbientTemperature: 100.0,
+		CoolantTemperature: 100.0,
+	}
+
+	output := power.Tick(testInput)
+
+	assert.Equal(t, output.Temperature, 50.0)
+}
+
+func TestPower_TickOutputPower(t *testing.T) {
+	testMetal := testMetal()
+	testMetal.HeatAbsorptionRate = 0.0
+	testMetal.MaxTemperatureDelta = 1.0
+
+	power := testPower(testMetal)
+	power.temperature.SetNorm(0.0)
+
+	output := power.Tick(testInput())
+
+	assert.Equal(t, output.Power, 100.0)
 }

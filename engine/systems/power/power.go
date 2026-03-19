@@ -38,13 +38,12 @@ type Power interface {
 
 // TODO: create generator input
 const (
-	startingPower  = 1.0
-	startingFuel   = 1.0
-	startingHealth = 1.0
+	startingPowerOutput = 0.0
+	startingFuel        = 1.0
+	startingHealth      = 1.0
 
-	percentFuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	percentHealthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	percentPowerUsedPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG // NOTE: will be replaced by power output like cooling source
+	fuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	healthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 )
 
 type PowerCore struct {
@@ -58,6 +57,7 @@ type PowerCore struct {
 	health      *components.Health
 
 	heatGenerationRate float64
+	powerGrowthRate    float64
 }
 
 func (s *PowerCore) Temperature() components.ComponentReader { return s.temperature }
@@ -71,8 +71,10 @@ func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 		s.power.SetNorm(0.0)
 	}
 
-	if s.fuel.Value() <= s.fuel.Min() {
-		s.power.SetNorm(s.power.Norm() - percentPowerUsedPerTick)
+	if s.fuel.Norm() <= 0.0 {
+		s.power.SetNorm(s.power.Norm() - s.powerGrowthRate)
+	} else {
+		s.power.SetNorm(s.power.Norm() + s.powerGrowthRate)
 	}
 
 	if input.CoolantTemperature < s.temperature.Value() {
@@ -84,17 +86,17 @@ func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 		s.temperature.SetNorm(s.temperature.Norm() - temperatureDelta)
 	}
 
-	if s.power.Value() > s.power.Min() {
-		s.fuel.SetNorm(s.fuel.Norm() - percentFuelLostPerTick)
+	if s.power.Norm() > 0.0 {
+		s.fuel.SetNorm(s.fuel.Norm() - fuelLostPerTick)
 		s.temperature.SetNorm(s.temperature.Norm() + s.heatGenerationRate)
 	}
 
-	if s.power.Value() <= s.power.Min() && s.temperature.Value() > input.AmbientTemperature {
+	if s.power.Norm() <= 0.0 && s.temperature.Value() > input.AmbientTemperature {
 		s.temperature.SetNorm(s.temperature.Norm() - s.housingMaterial.HeatAbsorptionRate)
 	}
 
-	if s.temperature.Value() >= s.temperature.Max() {
-		s.health.SetNorm(s.health.Norm() - percentHealthLostPerTick)
+	if s.temperature.Value() >= 1.0 {
+		s.health.SetNorm(s.health.Norm() - healthLostPerTick)
 	}
 
 	output := PowerOutput{

@@ -81,21 +81,21 @@ func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 
 	percentHeatAbsorbed := flow * s.coolantFluid.HeatAbsorptionRate
 
-	normalizeLoad := input.LoadTemperature / s.temperature.Max()
+	normalizeLoad := (input.LoadTemperature - s.temperature.Min()) / (s.temperature.Max() - s.temperature.Min())
 
 	temperatureDelta := normalizeLoad * percentHeatAbsorbed
 	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
 
 	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
 
-	if s.temperature.Value() >= s.temperature.Max() {
+	if s.temperature.Norm() >= 1.0 {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)
 	}
 
 	s.viscosity.SetNorm(s.calculateViscosityNorm())
 	s.pressure.SetNorm(s.calculatePressureNorm())
 
-	if s.pressure.Value() >= s.pressure.Max() {
+	if s.pressure.Norm() >= 1.0 {
 		s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 	}
 

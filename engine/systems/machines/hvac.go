@@ -9,6 +9,9 @@ import (
 
 const (
 	heatBleedRate = 0.01
+
+	minLivableTemp = -10.0
+	maxLivableTemp = 50.0
 )
 
 type HvacInput struct {
@@ -19,6 +22,7 @@ type HvacInput struct {
 type HvacOutput struct {
 	Status            systems.Status
 	TargetTemperature float64
+	Temperature       float64
 }
 
 type Hvac struct {
@@ -27,20 +31,23 @@ type Hvac struct {
 	temperature components.Component
 	health      *components.Health
 
-	temperatureDelta  float64
-	targetTemperature float64
-	requiredPower     float64
+	maxTemperatureDelta float64
+	targetTemperature   float64
+	requiredPower       float64
 }
 
 func NewHvac(targetTemperature float64) *Hvac {
 
+	// NOTE: Linear interpolation only works while temp curve is linear!!
+	normTargetTemp := (targetTemperature - minLivableTemp) / (maxLivableTemp - minLivableTemp)
+
 	system := &Hvac{
-		SystemCore:        systems.NewSystemCore("Life Support"),
-		temperature:       components.NewComponent("Bunker Temperature (C)", .5, -10.0, 50.0),
-		health:            components.NewHealthComponent(1.0),
-		temperatureDelta:  0.02,
-		targetTemperature: targetTemperature,
-		requiredPower:     1200,
+		SystemCore:          systems.NewSystemCore("Life Support"),
+		temperature:         components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
+		health:              components.NewHealthComponent(1.0),
+		maxTemperatureDelta: 0.02,
+		targetTemperature:   targetTemperature,
+		requiredPower:       1200,
 	}
 
 	return system
@@ -48,7 +55,7 @@ func NewHvac(targetTemperature float64) *Hvac {
 
 func (s *Hvac) Status() systems.Status {
 	switch {
-	case s.temperature.Value() >= s.temperature.Max() || s.temperature.Value() <= s.temperature.Min():
+	case s.temperature.Norm() >= 1.0 || s.temperature.Norm() <= 0.0:
 		return systems.Offline
 	case s.temperature.Value() >= 40.0 || s.temperature.Value() <= 0.0:
 		return systems.Critical
@@ -80,7 +87,7 @@ func (s *Hvac) Tick(input HvacInput) HvacOutput {
 
 	s.temperature.SetNorm(s.temperature.Norm() + totalBleed)
 
-	temperatureDelta := s.temperatureDelta * effectiveness
+	temperatureDelta := s.maxTemperatureDelta * effectiveness
 
 	if s.temperature.Value() > s.targetTemperature {
 		s.temperature.SetNorm(s.temperature.Norm() - temperatureDelta)
@@ -92,6 +99,7 @@ func (s *Hvac) Tick(input HvacInput) HvacOutput {
 	output := HvacOutput{
 		Status:            s.Status(),
 		TargetTemperature: s.targetTemperature,
+		Temperature:       s.temperature.Value(),
 	}
 
 	return output

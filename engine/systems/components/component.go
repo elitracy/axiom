@@ -31,7 +31,6 @@ type ComponentCore struct {
 	name      string
 	min       float64
 	max       float64
-	value     float64
 	normValue float64
 	curve     func(float64) float64
 }
@@ -73,23 +72,24 @@ func (c *ComponentCore) Min() float64 { return c.min }
 func (c *ComponentCore) Max() float64 { return c.max }
 
 // Returns the component's current value
-func (c *ComponentCore) Value() float64 { return c.value }
+func (c *ComponentCore) Value() float64 {
+
+	value := c.normValue
+	if c.curve != nil {
+		value = c.curve(c.normValue)
+	}
+
+	value = value*(c.Max()-c.Min()) + c.Min()
+	value = utils.Clamp(c.min, value, c.max)
+
+	return value
+}
 
 // Returns the component's value normalized by the component's min and max
 func (c *ComponentCore) Norm() float64 { return c.normValue }
 
 // Sets the components applied value with a normalized value
-func (c *ComponentCore) SetNorm(normValue float64) {
-	c.normValue = utils.Clamp(0.0, normValue, 1.0)
-
-	c.value = normValue
-	if c.curve != nil {
-		c.value = c.curve(normValue)
-	}
-
-	c.value = c.value*(c.Max()-c.Min()) + c.Min()
-	c.value = utils.Clamp(c.min, c.value, c.max)
-}
+func (c *ComponentCore) SetNorm(normValue float64) { c.normValue = utils.Clamp(0.0, normValue, 1.0) }
 
 // Returns the stringified info of the component
 func (c *ComponentCore) String() string {

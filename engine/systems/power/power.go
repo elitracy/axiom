@@ -45,7 +45,6 @@ const (
 	percentFuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 	percentHealthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
 	percentPowerUsedPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG // NOTE: will be replaced by power output like cooling source
-
 )
 
 type PowerCore struct {
@@ -57,6 +56,8 @@ type PowerCore struct {
 	fuel        components.Component
 	temperature components.Component
 	health      *components.Health
+
+	heatGenerationRate float64
 }
 
 func (s *PowerCore) Temperature() components.ComponentReader { return s.temperature }
@@ -66,24 +67,26 @@ func (s *PowerCore) Status() systems.Status                  { return s.health.S
 
 // Updates the component values for the generator
 func (s *PowerCore) Tick(input PowerInput) PowerOutput {
+	if s.health.Status() == systems.Offline {
+		s.power.SetNorm(0.0)
+	}
+
 	if s.fuel.Value() <= s.fuel.Min() {
 		s.power.SetNorm(s.power.Norm() - percentPowerUsedPerTick)
 	}
 
 	if input.CoolantTemperature < s.temperature.Value() {
-		temperatureDelta := (s.temperature.Norm() - input.CoolantTemperature/s.temperature.Max())
-		temperatureDelta = utils.Clamp(-s.housingMaterial.MaxTemperatureDelta, temperatureDelta, s.housingMaterial.MaxTemperatureDelta)
+		coolingNorm := (input.CoolantTemperature - s.temperature.Min()) / (s.temperature.Max() - s.temperature.Min())
 
-		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
-	}
+		temperatureDelta := (s.temperature.Norm() - coolingNorm) * s.housingMaterial.HeatAbsorptionRate
+		temperatureDelta = utils.Clamp(0, temperatureDelta, s.housingMaterial.MaxTemperatureDelta)
 
-	if s.health.Status() == systems.Offline {
-		s.power.SetNorm(0.0)
+		s.temperature.SetNorm(s.temperature.Norm() - temperatureDelta)
 	}
 
 	if s.power.Value() > s.power.Min() {
 		s.fuel.SetNorm(s.fuel.Norm() - percentFuelLostPerTick)
-		s.temperature.SetNorm(s.temperature.Norm() + s.housingMaterial.HeatAbsorptionRate)
+		s.temperature.SetNorm(s.temperature.Norm() + s.heatGenerationRate)
 	}
 
 	if s.power.Value() <= s.power.Min() && s.temperature.Value() > input.AmbientTemperature {

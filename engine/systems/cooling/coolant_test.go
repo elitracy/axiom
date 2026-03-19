@@ -211,3 +211,16 @@ func TestCoolant_HighHeatAbsorptionRate(t *testing.T) {
 
 	assert.Equal(t, math.Round(output.Temperature), 100.0)
 }
+
+func TestCoolant_HighHeatDegradesVolumeOfFluid(t *testing.T) {
+	coolant := NewCoolantLoop(testFluid(), testMetal())
+	coolant.temperature.SetNorm(1.0)
+
+	var testInput = CoolantInput{
+		LoadTemperature: 100.0,
+	}
+
+	coolant.Tick(testInput)
+
+	assert.Equal(t, coolant.volume.Norm(), 1.0-volumeLossPerTick)
+}

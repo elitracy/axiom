@@ -2,13 +2,15 @@ package machines
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
+	"github.com/elias/axiom/engine/utils"
 )
 
 const (
-	heatBleedRate = 0.01
+	heatRate = 0.05
 
 	minLivableTemp = -10.0
 	maxLivableTemp = 50.0
@@ -31,9 +33,9 @@ type Hvac struct {
 	temperature components.Component
 	health      *components.Health
 
-	maxTemperatureDelta float64
-	targetTemperature   float64
-	requiredPower       float64
+	maxTemperatureNormDelta float64
+	targetTemperature       float64
+	requiredPower           float64
 }
 
 func NewHvac(targetTemperature float64) *Hvac {
@@ -42,12 +44,12 @@ func NewHvac(targetTemperature float64) *Hvac {
 	normTargetTemp := (targetTemperature - minLivableTemp) / (maxLivableTemp - minLivableTemp)
 
 	system := &Hvac{
-		SystemCore:          systems.NewSystemCore("Life Support"),
-		temperature:         components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
-		health:              components.NewHealthComponent(1.0),
-		maxTemperatureDelta: 0.02,
-		targetTemperature:   targetTemperature,
-		requiredPower:       1200,
+		SystemCore:              systems.NewSystemCore("Life Support"),
+		temperature:             components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
+		health:                  components.NewHealthComponent(1.0),
+		maxTemperatureNormDelta: 0.02,
+		targetTemperature:       targetTemperature,
+		requiredPower:           1200,
 	}
 
 	return system
@@ -55,11 +57,11 @@ func NewHvac(targetTemperature float64) *Hvac {
 
 func (s *Hvac) Status() systems.Status {
 	switch {
-	case s.temperature.Norm() >= 1.0 || s.temperature.Norm() <= 0.0:
+	case s.temperature.Value() >= maxLivableTemp || s.temperature.Value() <= minLivableTemp:
 		return systems.Offline
-	case s.temperature.Value() >= 40.0 || s.temperature.Value() <= 0.0:
+	case s.temperature.Value() >= 40.0 || s.temperature.Value() <= 10.0:
 		return systems.Critical
-	case s.temperature.Value() >= 30.0 || s.temperature.Value() <= 20.0:
+	case s.temperature.Value() >= 30.0 || s.temperature.Value() < 20.0:
 		return systems.Degraded
 	default:
 		return systems.Online
@@ -77,24 +79,32 @@ func (s *Hvac) Tick(input HvacInput) HvacOutput {
 		effectiveness = 1.0
 	}
 
-	totalBleed := 0.0
+	averageHeat := 0.0
 	for _, heat := range input.HeatSources {
-		delta := (heat - s.temperature.Value()) / s.temperature.Max()
-		if delta > 0 {
-			totalBleed += delta * heatBleedRate
-		}
+		averageHeat += heat
+	}
+	if len(input.HeatSources) > 0 {
+		averageHeat /= float64(len(input.HeatSources))
 	}
 
-	s.temperature.SetNorm(s.temperature.Norm() + totalBleed)
+	log.Printf("AVG HEAT: %v", averageHeat)
 
-	temperatureDelta := s.maxTemperatureDelta * effectiveness
+	temperatureRange := s.temperature.Max() - s.temperature.Min()
 
-	if s.temperature.Value() > s.targetTemperature {
-		s.temperature.SetNorm(s.temperature.Norm() - temperatureDelta)
-	}
-	if s.temperature.Value() < s.targetTemperature {
-		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
-	}
+	heatPushNorm := (averageHeat - s.temperature.Value()) / temperatureRange * heatRate
+	log.Printf("heatPush: %.2f", heatPushNorm)
+	heatPushNorm = utils.Clamp(-s.maxTemperatureNormDelta, heatPushNorm, s.maxTemperatureNormDelta)
+
+	hvacPushNorm := ((s.targetTemperature - s.temperature.Value()) / temperatureRange) * effectiveness
+	log.Printf("hvacPush: %.2f", hvacPushNorm)
+	hvacPushNorm = utils.Clamp(-s.maxTemperatureNormDelta, hvacPushNorm, s.maxTemperatureNormDelta)
+
+	log.Printf("heatPush: %.2f", heatPushNorm)
+	log.Printf("hvacPush: %.2f", hvacPushNorm)
+
+	netPushNorm := heatPushNorm + hvacPushNorm
+	log.Printf("net: %.2f", netPushNorm)
+	s.temperature.SetNorm(s.temperature.Norm() + netPushNorm)
 
 	output := HvacOutput{
 		Status:            s.Status(),

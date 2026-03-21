@@ -10,10 +10,15 @@ import (
 )
 
 const (
-	heatRate = 0.05
+	heatRate = 0.005
+	hvacRate = 0.03
 
 	minLivableTemp = -10.0
 	maxLivableTemp = 50.0
+
+	hvacEfficiencyZeroThreshold   = 0.0
+	hvacEfficiencyMediumThreshold = 0.5
+	hvacEfficiencyHighThreshold   = .9
 )
 
 type HvacInput struct {
@@ -33,9 +38,9 @@ type Hvac struct {
 	temperature components.Component
 	health      *components.Health
 
-	maxTemperatureNormDelta float64
-	targetTemperature       float64
-	requiredPower           float64
+	maxTempPush       float64
+	targetTemperature float64
+	requiredPower     float64
 }
 
 func NewHvac(targetTemperature float64) *Hvac {
@@ -44,12 +49,12 @@ func NewHvac(targetTemperature float64) *Hvac {
 	normTargetTemp := (targetTemperature - minLivableTemp) / (maxLivableTemp - minLivableTemp)
 
 	system := &Hvac{
-		SystemCore:              systems.NewSystemCore("Life Support"),
-		temperature:             components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
-		health:                  components.NewHealthComponent(1.0),
-		maxTemperatureNormDelta: 0.02,
-		targetTemperature:       targetTemperature,
-		requiredPower:           1200,
+		SystemCore:        systems.NewSystemCore("Life Support"),
+		temperature:       components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
+		health:            components.NewHealthComponent(1.0),
+		maxTempPush:       0.03,
+		targetTemperature: targetTemperature,
+		requiredPower:     1200,
 	}
 
 	return system
@@ -69,42 +74,27 @@ func (s *Hvac) Status() systems.Status {
 }
 
 func (s *Hvac) Tick(input HvacInput) HvacOutput {
-	effectiveness := 1.0
-	switch {
-	case input.PowerAvailable <= 0.0:
-		effectiveness = 0.0
-	case input.PowerAvailable <= s.requiredPower*.8:
-		effectiveness = 0.7
-	default:
-		effectiveness = 1.0
-	}
+	log.Printf("TEMP BEFORE: %v", s.temperature.Value())
 
-	averageHeat := 0.0
-	for _, heat := range input.HeatSources {
-		averageHeat += heat
-	}
-	if len(input.HeatSources) > 0 {
-		averageHeat /= float64(len(input.HeatSources))
-	}
+	effectiveness := calculateEffectiveness(input.PowerAvailable, s.requiredPower)
+
+	log.Printf("EFF: %v", effectiveness)
+	averageHeat := calculateAverageHeat(input.HeatSources)
 
 	log.Printf("AVG HEAT: %v", averageHeat)
 
-	temperatureRange := s.temperature.Max() - s.temperature.Min()
+	heatPush := calculateHeatPush(averageHeat, s.temperature.Value(), heatRate)
+	hvacPush := calculateHeatPush(s.targetTemperature, s.temperature.Value(), effectiveness*hvacRate)
 
-	heatPushNorm := (averageHeat - s.temperature.Value()) / temperatureRange * heatRate
-	log.Printf("heatPush: %.2f", heatPushNorm)
-	heatPushNorm = utils.Clamp(-s.maxTemperatureNormDelta, heatPushNorm, s.maxTemperatureNormDelta)
+	log.Printf("heatPush: %.2f", heatPush)
+	log.Printf("hvacPush: %.2f", hvacPush)
 
-	hvacPushNorm := ((s.targetTemperature - s.temperature.Value()) / temperatureRange) * effectiveness
-	log.Printf("hvacPush: %.2f", hvacPushNorm)
-	hvacPushNorm = utils.Clamp(-s.maxTemperatureNormDelta, hvacPushNorm, s.maxTemperatureNormDelta)
+	netPush := (heatPush + hvacPush) / (s.temperature.Max() - s.temperature.Min())
+	log.Printf("net: %.2f", netPush)
+	netPush = utils.Clamp(-s.maxTempPush, netPush, s.maxTempPush)
 
-	log.Printf("heatPush: %.2f", heatPushNorm)
-	log.Printf("hvacPush: %.2f", hvacPushNorm)
-
-	netPushNorm := heatPushNorm + hvacPushNorm
-	log.Printf("net: %.2f", netPushNorm)
-	s.temperature.SetNorm(s.temperature.Norm() + netPushNorm)
+	log.Printf("net clamped: %.2f", netPush)
+	s.temperature.SetNorm(s.temperature.Norm() + netPush)
 
 	output := HvacOutput{
 		Status:            s.Status(),
@@ -112,7 +102,32 @@ func (s *Hvac) Tick(input HvacInput) HvacOutput {
 		Temperature:       s.temperature.Value(),
 	}
 
+	log.Printf("TEMP: %v", output.Temperature)
 	return output
+}
+
+func calculateAverageHeat(heatSources []float64) float64 {
+
+	averageHeat := 0.0
+	for _, heat := range heatSources {
+		averageHeat += heat
+	}
+
+	averageHeat /= max(float64(len(heatSources)), 1.0)
+
+	return averageHeat
+}
+
+func calculateHeatPush(targetTemp float64, currentTemp, heatingRate float64) float64 {
+	return (targetTemp - currentTemp) * heatingRate
+}
+
+func calculateEffectiveness(powerAvailable, requiredPower float64) float64 {
+	if powerAvailable >= .25*requiredPower {
+		return min(powerAvailable/requiredPower, 1.0)
+	}
+
+	return 0.0
 }
 
 func (s *Hvac) String() string {

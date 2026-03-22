@@ -6,82 +6,31 @@ import (
 	"strings"
 )
 
-type Shell struct {
-	cwd *Node
+type Node interface {
+	Name() string
+	Parent() *DirNode
+	SetParent(*DirNode)
 }
 
-func (s *Shell) Ls(path string) string {
-	return s.cwd.Ls(path)
-}
-
-func (s *Shell) Cd(path string) {
-
-	if path == "." {
-		return
-	}
-
-	if path == ".." && s.cwd.Parent() != nil {
-		s.cwd = s.cwd.Parent()
-	}
-
-	dir, remaining, _ := strings.Cut(path, "/")
-
-	node, exists := s.cwd.children[dir]
-
-	// bad cd
-	if !exists {
-		return
-	}
-
-	// at last point
-	if remaining == "" {
-		s.cwd = node
-	}
-
-	if exists && node.IsDir() {
-		if remaining == "" {
-			s.Cd(path)
-			return
-		}
-
-		s.Cd(dir)
-	}
-
-}
-
-type Node struct {
+type DirNode struct {
 	name     string
-	children map[string]*Node
-	parent   *Node
-
-	reader func() string
+	children map[string]Node
+	parent   *DirNode
 }
 
-func NewNode(path string) *Node {
-
-	isDir := path[len(path)-1] == '/'
-
-	parts := strings.Split(path, "/")
-
-	node := &Node{
-		name: parts[len(parts)-1],
+func NewDirNode(name string) *DirNode {
+	return &DirNode{
+		name:     name,
+		children: make(map[string]Node),
 	}
-
-	if isDir {
-		node.children = make(map[string]*Node)
-
-	}
-
-	return node
 }
 
-func (n *Node) Name() string         { return n.name + "/" }
-func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
-func (n *Node) Parent() *Node        { return n.parent }
-func (n *Node) SetParent(node *Node) { n.parent = node }
-func (n *Node) IsDir() bool          { return n.children == nil }
+func (n *DirNode) Name() string                    { return n.name + "/" }
+func (n *DirNode) AddChild(name string, node Node) { n.children[name] = node; node.SetParent(n) }
+func (n *DirNode) Parent() *DirNode                { return n.parent }
+func (n *DirNode) SetParent(node *DirNode)         { n.parent = node }
 
-func (n *Node) Ls(path string) string {
+func (n *DirNode) Ls(path string) string {
 
 	if path == ".." {
 		if n.Parent() == nil {

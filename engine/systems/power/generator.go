@@ -12,7 +12,7 @@ func NewGenerator(housingMaterial materials.Metal, ambientTemperature float64) P
 
 	system := &PowerCore{
 		SystemCore:      systems.NewSystemCore("Generator"),
-		power:           components.NewComponent("Power Output (%)", startingPowerOutput, 0.0, 2400),
+		power:           components.NewComponent("Power Output (W)", startingPowerOutput, 0.0, 2400),
 		fuel:            components.NewComponent("Fuel (%)", startingFuel, 0.0, 1.0),
 		temperature:     components.NewComponent("Temperature (C)", 0.0, housingMaterial.MinTemperature, housingMaterial.MaxTemperature, housingMaterial.TemperatureCurve),
 		health:          components.NewHealthComponent(startingHealth),

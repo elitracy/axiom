@@ -11,7 +11,7 @@ func TestLifeSupport_New(t *testing.T) {
 	ls := NewLifeSupport()
 	assert.Equal(t, ls.Name(), "Life Support")
 	assert.Equal(t, ls.Status(), systems.Online)
-	assert.Equal(t, ls.requiredPower, 600.0)
+	assert.Equal(t, ls.powerCapacity, 600.0)
 }
 
 func TestLifeSupport_Tick(t *testing.T) {

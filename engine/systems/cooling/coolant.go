@@ -56,7 +56,7 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 	system := &CoolantCore{
 		SystemCore:   systems.NewSystemCore("Cooling Loop"),
 		volume:       components.NewComponent("Volume (%)", 1.0, 0.0, 1.0),
-		temperature:  components.NewComponent("Temperature (C)", 0.0, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
+		temperature:  components.NewComponent("Temperature (C)", 0.01, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
 		viscosity:    components.NewComponent("Viscosity (cP)", 0.0, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
 		pressure:     components.NewComponent("Pressure (kPa)", 0.0, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
 		health:       components.NewHealthComponent(1.0),

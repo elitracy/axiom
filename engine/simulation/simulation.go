@@ -28,8 +28,8 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 
 	heatSources = append(heatSources, powerOut.Temperature)
 
-	scrubberOut := ws.Scrubber.Tick(machines.ScrubberInput{PowerAvailable: powerOut.Power * .25})
 	hvacOut := ws.Hvac.Tick(machines.HvacInput{PowerSupplied: powerOut.Power * .5, HeatSources: heatSources})
+	scrubberOut := ws.Scrubber.Tick(machines.ScrubberInput{PowerAvailable: powerOut.Power * .25})
 	ws.LifeSupport.Tick(machines.LifeSupportInput{PowerAvailable: powerOut.Power * .25, TemperatureStatus: hvacOut.Status, OxygenStatus: scrubberOut.Status})
 
 	lastCoolantOut = coolantOut
@@ -37,7 +37,7 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 
 	logging.Info("%s", ws.Power.String())
 	logging.Info("%s", ws.Coolant.String())
-	logging.Info("%s", ws.Hvac.String())
+	// logging.Info("%s", ws.Hvac.String())
 	// logging.Info("%s", ws.Scrubber.String())
 	// logging.Info("%s", ws.LifeSupport.String())
 }

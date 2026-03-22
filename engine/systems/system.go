@@ -1,5 +1,9 @@
 package systems
 
+const (
+	TICKS_TILL_DEATH_DEBUG = 10
+)
+
 type Status int8
 
 const (
@@ -10,14 +14,14 @@ const (
 )
 
 type SystemID struct {
-	id int
+	ID int
 }
 
 type System interface {
 	ID() SystemID
 	Name() string
 	String() string
-	Tick()
+	Status() Status
 }
 
 type SystemCore struct {
@@ -30,7 +34,7 @@ type SystemCore struct {
 func NewSystemCore(name string) *SystemCore {
 	return &SystemCore{
 		// TODO: generate system IDs dynamically
-		id:   SystemID{id: 0},
+		id:   SystemID{ID: 0},
 		name: name,
 	}
 }

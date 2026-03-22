@@ -222,7 +222,7 @@ func TestHvacTick_PowerHeatTargetTemps(t *testing.T) {
 		{"80c - High Power", 80, 1200, 28},
 
 		{"140c - Low Power", 140, 300, 50},
-		{"140c - Med Power", 140, 600, 50},
+		{"140c - Med Power", 140, 600, 47},
 		{"140c - High Power", 140, 1200, 31},
 
 		{"200c - Low Power", 200, 300, 50},

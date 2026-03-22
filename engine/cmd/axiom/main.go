@@ -14,9 +14,9 @@ func main() {
 	startTick := engine.NewTick()
 	logging.Init("logging/logs/debug.log", startTick)
 
-	generator := power.NewGenerator(materials.NewSteel(), 20.0)
+	generator := power.NewGenerator(materials.NewSteel(), 25.0)
 	coolant := cooling.NewCoolantLoop(materials.NewWater(), materials.NewSteel())
-	hvac := machines.NewHvac(20.0)
+	hvac := machines.NewHvac(25.0)
 	scrubber := machines.NewScrubber()
 	lifeSupport := machines.NewLifeSupport()
 
@@ -28,6 +28,7 @@ func main() {
 		LifeSupport: lifeSupport,
 	}
 
+	logging.Ok("STARTING AXIOM")
 	engine.RunGame(world, startTick)
 
 }

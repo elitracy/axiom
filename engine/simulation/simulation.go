@@ -23,13 +23,13 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 
 	var heatSources []float64
 
-	powerOut := ws.Power.Tick(power.PowerInput{CoolantTemperature: lastCoolantOut.Temperature})
-	coolantOut := ws.Coolant.Tick(cooling.CoolantInput{LoadTemperature: powerOut.Temperature})
+	powerOut := ws.Power.Tick(power.PowerInput{CoolantTemperature: lastCoolantOut.Temperature, AmbientTemperature: lastHvacOut.Temperature})
+	coolantOut := ws.Coolant.Tick(cooling.CoolantInput{LoadTemperature: powerOut.Temperature, AmbientTemp: lastHvacOut.Temperature})
 
 	heatSources = append(heatSources, powerOut.Temperature)
 
-	scrubberOut := ws.Scrubber.Tick(machines.ScrubberInput{PowerAvailable: powerOut.Power * .25})
 	hvacOut := ws.Hvac.Tick(machines.HvacInput{PowerSupplied: powerOut.Power * .5, HeatSources: heatSources})
+	scrubberOut := ws.Scrubber.Tick(machines.ScrubberInput{PowerAvailable: powerOut.Power * .25})
 	ws.LifeSupport.Tick(machines.LifeSupportInput{PowerAvailable: powerOut.Power * .25, TemperatureStatus: hvacOut.Status, OxygenStatus: scrubberOut.Status})
 
 	lastCoolantOut = coolantOut

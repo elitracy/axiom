@@ -48,9 +48,9 @@ func TestCoolantCreation(t *testing.T) {
 	assert.Equal(t, coolant.Name(), "Cooling Loop")
 	assert.Equal(t, coolant.Status(), systems.Online)
 	assert.Equal(t, coolant.volume.Norm(), 1.0)
-	assert.Equal(t, coolant.temperature.Norm(), testFluid().MinTemperature)
-	assert.Equal(t, coolant.viscosity.Norm(), 1.0)
-	assert.Equal(t, coolant.pressure.Norm(), 0.05)
+	assert.Equal(t, coolant.temperature.Norm(), 0.01)
+	assert.Equal(t, coolant.viscosity.Norm(), 0.99)
+	assert.InDelta(t, coolant.pressure.Norm(), 0.051, 0.001)
 }
 
 func TestCoolant_CalculateViscosity(t *testing.T) {
@@ -76,6 +76,7 @@ func TestCoolant_HighHeatDegradesVolumeOfFluid(t *testing.T) {
 
 	var testInput = CoolantInput{
 		LoadTemperature: 100.0,
+		AmbientTemp:     100.0,
 	}
 
 	coolant.Tick(testInput)
@@ -121,6 +122,7 @@ func TestCoolant_TemperatureDelta(t *testing.T) {
 
 			input := CoolantInput{
 				LoadTemperature: 100,
+				AmbientTemp:     100,
 			}
 
 			coolant := NewCoolantLoop(fluid, metal)
@@ -174,6 +176,7 @@ func TestCoolant_HeatAbsorptionRate(t *testing.T) {
 
 			input := CoolantInput{
 				LoadTemperature: 100,
+				AmbientTemp:     100,
 			}
 
 			coolant := NewCoolantLoop(fluid, metal)
@@ -188,6 +191,61 @@ func TestCoolant_HeatAbsorptionRate(t *testing.T) {
 
 		})
 	}
+}
+
+func TestCoolant_RadiationCoolsTowardAmbient(t *testing.T) {
+	coolant := NewCoolantLoop(testFluid(), testMetal())
+	coolant.temperature.SetNorm(0.5)
+
+	input := CoolantInput{
+		LoadTemperature: 0.0,
+		AmbientTemp:     25.0,
+	}
+
+	startTemp := coolant.temperature.Value()
+	coolant.Tick(input)
+
+	assert.Less(t, coolant.temperature.Value(), startTemp)
+	assert.Greater(t, coolant.temperature.Value(), 25.0)
+}
+
+func TestCoolant_RadiationDoesNotFireBelowAmbient(t *testing.T) {
+	coolant := NewCoolantLoop(testFluid(), testMetal())
+	coolant.temperature.SetNorm(0.1)
+
+	input := CoolantInput{
+		LoadTemperature: 0.0,
+		AmbientTemp:     50.0,
+	}
+
+	startTemp := coolant.temperature.Value()
+	coolant.Tick(input)
+
+	assert.InDelta(t, coolant.temperature.Value(), startTemp, 0.5)
+}
+
+func TestCoolant_RadiationProportionalToGap(t *testing.T) {
+	fluid := testFluid()
+	metal := testMetal()
+
+	input := CoolantInput{
+		LoadTemperature: 0.0,
+		AmbientTemp:     0.0,
+	}
+
+	coolantHot := NewCoolantLoop(fluid, metal)
+	coolantHot.temperature.SetNorm(0.8)
+	hotStart := coolantHot.temperature.Value()
+	coolantHot.Tick(input)
+	hotDrop := hotStart - coolantHot.temperature.Value()
+
+	coolantWarm := NewCoolantLoop(fluid, metal)
+	coolantWarm.temperature.SetNorm(0.3)
+	warmStart := coolantWarm.temperature.Value()
+	coolantWarm.Tick(input)
+	warmDrop := warmStart - coolantWarm.temperature.Value()
+
+	assert.Greater(t, hotDrop, warmDrop)
 }
 
 func TestCoolant_CalculatePressure(t *testing.T) {
@@ -245,13 +303,14 @@ func TestCoolant_TickSteadyState(t *testing.T) {
 	tests := []struct {
 		name            string
 		loadTemp        float64
+		ambientTemp     float64
 		startTempNorm   float64
 		ticks           int
 		expectedTempDir string
 	}{
-		{"Hot load from cold", 100, 0.1, 50, "up"},
-		{"Cold load from hot", 0, 1.0, 50, "stable"},
-		{"No load", 0, 0.0, 50, "stable"},
+		{"Hot load from cold", 100, 100, 0.1, 50, "up"},
+		{"Cold load from hot", 0, 0, 1.0, 50, "down"},
+		{"No load", 0, 0, 0.0, 50, "stable"},
 	}
 
 	for _, tt := range tests {
@@ -279,6 +338,7 @@ func TestCoolant_TickSteadyState(t *testing.T) {
 
 			input := CoolantInput{
 				LoadTemperature: tt.loadTemp,
+				AmbientTemp:     tt.ambientTemp,
 			}
 
 			coolant := NewCoolantLoop(fluid, metal)

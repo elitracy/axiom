@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	TICK_SLEEP = time.Second / 1
+	TICKS_PER_SECOND = 100
+	TICK_SLEEP       = time.Second / TICKS_PER_SECOND
 )
 
 type Tick struct {

@@ -192,6 +192,60 @@ func TestPower_TickOutputPower(t *testing.T) {
 	assert.Equal(t, output.Power, 100.0)
 }
 
+func TestPower_CoolantCoolingUsesValueDelta(t *testing.T) {
+	testMetal := testMetalStandard()
+
+	power := testPower(testMetal)
+	power.temperature.SetNorm(0.5)
+	power.heatGenerationRate = 0.0
+
+	input := PowerInput{
+		CoolantTemperature: 25.0,
+		AmbientTemperature: 100.0,
+	}
+
+	startTemp := power.temperature.Value()
+	power.Tick(input)
+
+	assert.Less(t, power.temperature.Value(), startTemp)
+}
+
+func TestPower_NoPowerDissipatesHeatToAmbient(t *testing.T) {
+	testMetal := testMetalStandard()
+
+	power := testPower(testMetal)
+	power.temperature.SetNorm(0.5)
+	power.power.SetNorm(0.0)
+
+	input := PowerInput{
+		CoolantTemperature: 100.0,
+		AmbientTemperature: 25.0,
+	}
+
+	startTemp := power.temperature.Value()
+	power.Tick(input)
+
+	assert.Less(t, power.temperature.Value(), startTemp)
+}
+
+func TestPower_NoPowerAtAmbientStaysStable(t *testing.T) {
+	testMetal := testMetalStandard()
+
+	power := testPower(testMetal)
+	ambientNorm := 25.0 / 100.0
+	power.temperature.SetNorm(ambientNorm)
+	power.power.SetNorm(0.0)
+
+	input := PowerInput{
+		CoolantTemperature: 100.0,
+		AmbientTemperature: 25.0,
+	}
+
+	power.Tick(input)
+
+	assert.InDelta(t, power.temperature.Value(), 25.0, 0.5)
+}
+
 func TestPower_TickSteadyState(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -208,9 +262,9 @@ func TestPower_TickSteadyState(t *testing.T) {
 		expectedTempDir  string // "up", "down", "stable"
 		expectedPowerDir string // "up", "down", "stable"
 	}{
-		{"Full Fuel - No Coolant Effect", 999, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "down"},
-		{"Full Fuel - Weak Coolant Effect", 20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "down"},
-		{"Full Fuel - Strong Coolant Effect", -20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "stable", "down"},
+		{"Full Fuel - No Coolant Effect", 999, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "stable"},
+		{"Full Fuel - Weak Coolant Effect", 20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "stable"},
+		{"Full Fuel - Strong Coolant Effect", -20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "stable", "stable"},
 		{"No Fuel - High Temp", 999, 0, .01, .01, 1, 1, 0, testMetalStandard(), 100, "down", "down"},
 		{"No Fuel - No Power - High Temp - High Ambient", 999, 100, .01, .01, 1, 0, 0, testMetalStandard(), 100, "stable", "stable"},
 		{"Full Fuel - Coolant Heat Equalibrium", 0, 100, .01, .01, 0.2, 1, 1, testMetalStandard(), 10, "stable", "stable"},

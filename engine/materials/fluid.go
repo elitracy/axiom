@@ -1,6 +1,5 @@
 package materials
 
-import "github.com/elias/axiom/engine/utils"
 
 type Fluid struct {
 	Name string // the name of the fluid
@@ -24,18 +23,12 @@ func NewWater() Fluid {
 
 		MinTemperature: 0.0,
 		MaxTemperature: 100.0,
-		TemperatureCurve: func(x float64) float64 {
-			return utils.Tanh(x, 3.1, 0) + 0.015
-		},
 
 		MinViscosity: 0.3,
 		MaxViscosity: 1.0,
-		ViscosityCurve: func(x float64) float64 {
-			return 1 - utils.Tanh(x, 4.2, 0)
-		},
 
-		HeatAbsorptionRate:   0.02,
-		MaxTemperatureDelta:  0.04,
+		HeatAbsorptionRate:   0.03,
+		MaxTemperatureDelta:  0.05,
 		ThermalExpansionRate: 0.8,
 	}
 
@@ -50,17 +43,9 @@ func NewPropyleneGlycol() Fluid {
 		MaxTemperature:       180.0,
 		MinViscosity:         1.0,
 		MaxViscosity:         50.0,
-		HeatAbsorptionRate:   0.01,
-		MaxTemperatureDelta:  0.02,
+		HeatAbsorptionRate:   0.05,
+		MaxTemperatureDelta:  0.08,
 		ThermalExpansionRate: 0.4,
-	}
-
-	fluid.TemperatureCurve = func(x float64) float64 {
-		return utils.Tanh(x, 3.1, 0) + 0.015
-	}
-
-	fluid.ViscosityCurve = func(x float64) float64 {
-		return 1 - utils.Tanh(x, 10.0, 0)
 	}
 
 	return fluid

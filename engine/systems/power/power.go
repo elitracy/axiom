@@ -42,8 +42,8 @@ const (
 	startingFuel        = 1.0
 	startingHealth      = 1.0
 
-	fuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	healthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	fuelLostPerTick   = 0.001
+	healthLostPerTick = 0.001
 )
 
 type PowerCore struct {
@@ -78,9 +78,8 @@ func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 	}
 
 	if input.CoolantTemperature < s.temperature.Value() {
-		coolingNorm := (input.CoolantTemperature - s.temperature.Min()) / (s.temperature.Max() - s.temperature.Min())
 
-		temperatureDelta := (s.temperature.Norm() - coolingNorm) * s.housingMaterial.HeatAbsorptionRate
+		temperatureDelta := (s.temperature.Value() - input.CoolantTemperature) / (s.temperature.Max() - s.temperature.Min()) * s.housingMaterial.HeatAbsorptionRate
 		temperatureDelta = utils.Clamp(0, temperatureDelta, s.housingMaterial.MaxTemperatureDelta)
 
 		s.temperature.SetNorm(s.temperature.Norm() - temperatureDelta)

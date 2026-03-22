@@ -20,14 +20,14 @@ type LifeSupportOutput struct {
 type LifeSupport struct {
 	*systems.SystemCore
 	health        *components.Health
-	requiredPower float64
+	powerCapacity float64
 }
 
 func NewLifeSupport() *LifeSupport {
 	system := &LifeSupport{
 		SystemCore:    systems.NewSystemCore("Life Support"),
 		health:        components.NewHealthComponent(1.0),
-		requiredPower: 600.0,
+		powerCapacity: 600.0,
 	}
 
 	return system

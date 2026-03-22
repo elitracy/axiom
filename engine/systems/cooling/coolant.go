@@ -10,15 +10,18 @@ import (
 )
 
 const (
-	healthDecayPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	volumeLossPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	healthDecayPerTick = 0.001
+	volumeLossPerTick  = 0.001
 
-	basePressure = 0.05
+	basePressure  = 0.05
+	minFlow       = 0.05
+	radiationRate = 0.1
 )
 
 // The input to the coolant tick function
 type CoolantInput struct {
 	LoadTemperature float64
+	AmbientTemp     float64
 }
 
 // The output of the coolant tick function
@@ -56,7 +59,7 @@ func NewCoolantLoop(coolantFluid materials.Fluid, pipeMetal materials.Metal) *Co
 	system := &CoolantCore{
 		SystemCore:   systems.NewSystemCore("Cooling Loop"),
 		volume:       components.NewComponent("Volume (%)", 1.0, 0.0, 1.0),
-		temperature:  components.NewComponent("Temperature (C)", 0.0, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
+		temperature:  components.NewComponent("Temperature (C)", 0.01, coolantFluid.MinTemperature, coolantFluid.MaxTemperature, coolantFluid.TemperatureCurve),
 		viscosity:    components.NewComponent("Viscosity (cP)", 0.0, coolantFluid.MinViscosity, coolantFluid.MaxViscosity, coolantFluid.ViscosityCurve),
 		pressure:     components.NewComponent("Pressure (kPa)", 0.0, pipeMetal.MinPressure, pipeMetal.MaxPressure, pipeMetal.PressureCurve),
 		health:       components.NewHealthComponent(1.0),
@@ -77,7 +80,7 @@ func (s *CoolantCore) Status() systems.Status { return s.health.Status() }
 func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
-	flow := s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
+	flow := max(minFlow, s.pressure.Norm()*(1-s.viscosity.Norm())*s.volume.Norm())
 
 	percentHeatAbsorbed := flow * s.coolantFluid.HeatAbsorptionRate
 
@@ -86,7 +89,16 @@ func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	temperatureDelta := normalizeLoad * percentHeatAbsorbed
 	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
 
-	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	if temperatureDelta > 0 {
+		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	}
+
+	if s.temperature.Value() > input.AmbientTemp {
+		gap := s.temperature.Value() - input.AmbientTemp
+		newTemp := s.temperature.Value() - gap*radiationRate
+		newNorm := (newTemp - s.temperature.Min()) / (s.temperature.Max() - s.temperature.Min())
+		s.temperature.SetNorm(newNorm)
+	}
 
 	if s.temperature.Norm() >= 1.0 {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)

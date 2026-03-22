@@ -21,12 +21,8 @@ func NewSteel() Metal {
 		MaxTemperature:      427.0,
 		MinPressure:         1.0,
 		MaxPressure:         800.0,
-		MaxTemperatureDelta: 0.01,
+		MaxTemperatureDelta: 0.008,
 		HeatAbsorptionRate:  0.01,
-	}
-
-	metal.TemperatureCurve = func(x float64) float64 {
-		return utils.Tanh(x, 3.1, 0)
 	}
 
 	metal.PressureCurve = func(x float64) float64 {

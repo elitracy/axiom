@@ -11,7 +11,7 @@ import (
 
 const (
 	heatRate    = 0.05
-	hvacRate    = 0.75
+	hvacRate    = 0.85
 	maxTempPush = .035
 
 	minLivableTemp = -10.0
@@ -49,7 +49,7 @@ func NewHvac(targetTemperature float64) *Hvac {
 	normTargetTemp := (targetTemperature - minLivableTemp) / (maxLivableTemp - minLivableTemp)
 
 	system := &Hvac{
-		SystemCore:        systems.NewSystemCore("Life Support"),
+		SystemCore:        systems.NewSystemCore("HVAC"),
 		temperature:       components.NewComponent("Bunker Temperature (C)", normTargetTemp, minLivableTemp, maxLivableTemp),
 		health:            components.NewHealthComponent(1.0),
 		targetTemperature: targetTemperature,
@@ -75,9 +75,12 @@ func (s *Hvac) Status() systems.Status {
 func (s *Hvac) Tick(input HvacInput) HvacOutput {
 	effectiveness := calculateEffectiveness(input.PowerSupplied, s.powerCapacity)
 
-	averageHeat := calculateAverageHeat(input.HeatSources)
+	heatPush := 0.0
+	if len(input.HeatSources) > 0 {
+		averageHeat := calculateAverageHeat(input.HeatSources)
+		heatPush = calculateHeatPush(averageHeat, s.temperature.Value(), heatRate)
+	}
 
-	heatPush := calculateHeatPush(averageHeat, s.temperature.Value(), heatRate)
 	hvacPush := calculateHeatPush(s.targetTemperature, s.temperature.Value(), effectiveness*hvacRate)
 
 	netPush := (heatPush + hvacPush) / (s.temperature.Max() - s.temperature.Min())

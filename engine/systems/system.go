@@ -1,9 +1,5 @@
 package systems
 
-const (
-	TICKS_TILL_DEATH_DEBUG = 10
-)
-
 type Status int8
 
 const (

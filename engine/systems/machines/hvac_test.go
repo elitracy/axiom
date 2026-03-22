@@ -8,22 +8,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const ambientTemp = 20.0
+const ambientTemp = 25.0
 
 func hvacInput() HvacInput {
 	return HvacInput{
-		PowerAvailable: 1200,
-		HeatSources:    []float64{},
+		PowerSupplied: 1200,
+		HeatSources:   []float64{},
 	}
 }
 
 func TestHVAC_NewHvac(t *testing.T) {
-	hvac := NewHvac(20.0)
+	hvac := NewHvac(25.0)
 
-	assert.Equal(t, hvac.maxTempPush, 0.01)
-	assert.Equal(t, hvac.targetTemperature, 20.0)
-	assert.Equal(t, hvac.requiredPower, 1200.0)
-	assert.Equal(t, hvac.temperature.Value(), ambientTemp)
+	assert.Equal(t, hvac.targetTemperature, 25.0)
+	assert.Equal(t, hvac.powerCapacity, 1200.0)
+	assert.InDelta(t, hvac.temperature.Value(), ambientTemp, 0.001)
 	assert.Equal(t, hvac.health.Status(), systems.Online)
 }
 
@@ -56,23 +55,24 @@ func TestHvacStatus(t *testing.T) {
 
 func TestCalculateEffectiveness(t *testing.T) {
 	tests := []struct {
-		name           string
-		powerAvailable float64
-		powerRequired  float64
-		expected       float64
+		name          string
+		powerSupplied float64
+		powerRequired float64
+		expected      float64
 	}{
-		{"neg power", -1000, 1200, 0.0},
-		{"no power", 0, 1200, 0.0},
-		{"bad power", 100, 1200, 0.0},
-		{"low power", 600, 1200, 0.5},
-		{"medium power", 900, 1200, 0.75},
-		{"high power", 1200, 1200, 1.0},
-		{"excess power", 2000, 1200, 1.0},
+		{"neg power", -1000, 1200, 0},
+		{"no power", 0, 1200, 0},
+		{"low power", 600, 1200, 0.25},
+		{"medium power", 900, 1200, 0.5625},
+		{"high power", 1200, 1200, 1},
+		{"excess power", 2000, 1200, 1},
+
+		{"zero capacity", 100, 0, 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := calculateEffectiveness(tt.powerAvailable, tt.powerRequired)
+			got := calculateEffectiveness(tt.powerSupplied, tt.powerRequired)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -159,19 +159,19 @@ func TestCalculateAverageHeat(t *testing.T) {
 }
 
 func TestHvacTick_NoPower_DriftToHeat(t *testing.T) {
-	hvac := NewHvac(20.0)
+	hvac := NewHvac(25.0)
 	input := hvacInput()
 	input.HeatSources = append(input.HeatSources, 100, 150, 200)
-	input.PowerAvailable = 0
+	input.PowerSupplied = 0
 
 	out1 := hvac.Tick(input)
 	out2 := hvac.Tick(input)
 	assert.Greater(t, out2.Temperature, out1.Temperature)
 
-	hvac = NewHvac(20.0)
+	hvac = NewHvac(25.0)
 	input = hvacInput()
 	input.HeatSources = append(input.HeatSources, -100, -150, -200)
-	input.PowerAvailable = 0
+	input.PowerSupplied = 0
 
 	out1 = hvac.Tick(input)
 	out2 = hvac.Tick(input)
@@ -179,16 +179,16 @@ func TestHvacTick_NoPower_DriftToHeat(t *testing.T) {
 }
 
 func TestHvacTick_LessPower_ConvergesLessEfficiently(t *testing.T) {
-	hvacHighPower := NewHvac(20.0)
+	hvacHighPower := NewHvac(25.0)
 	inputHighPower := hvacInput()
 	inputHighPower.HeatSources = append(inputHighPower.HeatSources, 100)
 
 	hvacHighPower.Tick(inputHighPower)
 	outHighPower := hvacHighPower.Tick(inputHighPower)
 
-	hvacLowPower := NewHvac(20.0)
+	hvacLowPower := NewHvac(25.0)
 	inputLowPower := hvacInput()
-	inputLowPower.PowerAvailable = 1200 * hvacEfficiencyMediumThreshold
+	inputLowPower.PowerSupplied = 1200 * hvacEfficiencyMediumThreshold
 	inputLowPower.HeatSources = append(inputLowPower.HeatSources, 100)
 
 	hvacLowPower.Tick(inputLowPower)
@@ -205,33 +205,41 @@ func TestHvacTick_PowerHeatTargetTemps(t *testing.T) {
 		powerAvailable float64
 		expected       float64
 	}{
-		// Low heat — all power levels hold
-		{"High Power - Low Heat", 35, 1200, 21.0},
-		{"Med Power - Low Heat", 35, 600, 22.0},
-		{"Low Power - Low Heat", 35, 300, 23.0},
+		{"20c - Low Power", 20, 300, 22},
+		{"20c - Med Power", 20, 600, 23},
+		{"20c - High Power", 20, 1200, 24},
 
-		// Med heat — low power starts struggling
-		{"High Power - Med Heat", 70, 1200, 23.0},
-		{"Med Power - Med Heat", 70, 600, 26.0},
-		{"Low Power - Med Heat", 70, 300, 30.5},
+		{"30c - Low Power", 30, 300, 29},
+		{"30c - Med Power", 30, 600, 26},
+		{"30c - High Power", 30, 1200, 25},
 
-		// High heat — med power struggles too
-		{"High Power - High Heat", 110, 1200, 25.5},
-		{"Med Power - High Heat", 110, 600, 30.5},
-		{"Low Power - High Heat", 110, 300, 39.0},
+		{"50c - Low Power", 50, 300, 38},
+		{"50c - Med Power", 50, 600, 30},
+		{"50c - High Power", 50, 1200, 27},
 
-		// Extreme heat — everyone hurts
-		{"High Power - Extreme Heat", 190, 1200, 30.5},
-		{"Med Power - Extreme Heat", 190, 600, 40.0},
-		{"Low Power - Extreme Heat", 190, 300, 50.0},
+		{"80c - Low Power", 80, 300, 50},
+		{"80c - Med Power", 80, 600, 36},
+		{"80c - High Power", 80, 1200, 28},
+
+		{"140c - Low Power", 140, 300, 50},
+		{"140c - Med Power", 140, 600, 50},
+		{"140c - High Power", 140, 1200, 31},
+
+		{"200c - Low Power", 200, 300, 50},
+		{"200c - Med Power", 200, 600, 50},
+		{"200c - High Power", 200, 1200, 36},
+
+		{"500c - Low Power", 500, 300, 50},
+		{"500c - Med Power", 500, 600, 50},
+		{"500c - High Power", 500, 1200, 50},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hvac := NewHvac(20.0)
+			hvac := NewHvac(25.0)
 			input := hvacInput()
 			input.HeatSources = append(input.HeatSources, tt.heatSource)
-			input.PowerAvailable = tt.powerAvailable
+			input.PowerSupplied = tt.powerAvailable
 
 			for range 100 {
 				hvac.Tick(input)

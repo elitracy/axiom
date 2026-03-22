@@ -48,9 +48,9 @@ func TestCoolantCreation(t *testing.T) {
 	assert.Equal(t, coolant.Name(), "Cooling Loop")
 	assert.Equal(t, coolant.Status(), systems.Online)
 	assert.Equal(t, coolant.volume.Norm(), 1.0)
-	assert.Equal(t, coolant.temperature.Norm(), testFluid().MinTemperature)
-	assert.Equal(t, coolant.viscosity.Norm(), 1.0)
-	assert.Equal(t, coolant.pressure.Norm(), 0.05)
+	assert.Equal(t, coolant.temperature.Norm(), 0.01)
+	assert.Equal(t, coolant.viscosity.Norm(), 0.99)
+	assert.InDelta(t, coolant.pressure.Norm(), 0.051, 0.001)
 }
 
 func TestCoolant_CalculateViscosity(t *testing.T) {

@@ -208,9 +208,9 @@ func TestPower_TickSteadyState(t *testing.T) {
 		expectedTempDir  string // "up", "down", "stable"
 		expectedPowerDir string // "up", "down", "stable"
 	}{
-		{"Full Fuel - No Coolant Effect", 999, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "down"},
-		{"Full Fuel - Weak Coolant Effect", 20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "down"},
-		{"Full Fuel - Strong Coolant Effect", -20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "stable", "down"},
+		{"Full Fuel - No Coolant Effect", 999, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "stable"},
+		{"Full Fuel - Weak Coolant Effect", 20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "up", "stable"},
+		{"Full Fuel - Strong Coolant Effect", -20, 0, .01, .01, 0, 1, 1, testMetalStandard(), 100, "stable", "stable"},
 		{"No Fuel - High Temp", 999, 0, .01, .01, 1, 1, 0, testMetalStandard(), 100, "down", "down"},
 		{"No Fuel - No Power - High Temp - High Ambient", 999, 100, .01, .01, 1, 0, 0, testMetalStandard(), 100, "stable", "stable"},
 		{"Full Fuel - Coolant Heat Equalibrium", 0, 100, .01, .01, 0.2, 1, 1, testMetalStandard(), 10, "stable", "stable"},

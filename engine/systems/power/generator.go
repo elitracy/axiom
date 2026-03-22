@@ -10,11 +10,13 @@ import (
 // ambientTemperature is the starting temperature of the generator
 func NewGenerator(housingMaterial materials.Metal, ambientTemperature float64) Power {
 
+	ambientTemperatureNorm := (ambientTemperature - housingMaterial.MinTemperature) / (housingMaterial.MaxTemperature - housingMaterial.MinTemperature)
+
 	system := &PowerCore{
 		SystemCore:      systems.NewSystemCore("Generator"),
 		power:           components.NewComponent("Power Output (W)", startingPowerOutput, 0.0, 2400),
 		fuel:            components.NewComponent("Fuel (%)", startingFuel, 0.0, 1.0),
-		temperature:     components.NewComponent("Temperature (C)", 0.0, housingMaterial.MinTemperature, housingMaterial.MaxTemperature, housingMaterial.TemperatureCurve),
+		temperature:     components.NewComponent("Temperature (C)", ambientTemperatureNorm, housingMaterial.MinTemperature, housingMaterial.MaxTemperature, housingMaterial.TemperatureCurve),
 		health:          components.NewHealthComponent(startingHealth),
 		housingMaterial: housingMaterial,
 

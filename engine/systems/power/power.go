@@ -42,8 +42,8 @@ const (
 	startingFuel        = 1.0
 	startingHealth      = 1.0
 
-	fuelLostPerTick   = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	healthLostPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	fuelLostPerTick   = 0.001
+	healthLostPerTick = 0.001
 )
 
 type PowerCore struct {

@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	healthDecayPerTick = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
-	volumeLossPerTick  = 1.0 / systems.TICKS_TILL_DEATH_DEBUG
+	healthDecayPerTick = 0.001
+	volumeLossPerTick  = 0.001
 
 	basePressure = 0.05
+	minFlow      = 0.05
 )
 
 // The input to the coolant tick function
@@ -77,7 +78,7 @@ func (s *CoolantCore) Status() systems.Status { return s.health.Status() }
 func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	s.health.SetNorm(s.health.Norm() - healthDecayPerTick)
 
-	flow := s.pressure.Norm() * (1 - s.viscosity.Norm()) * s.volume.Norm()
+	flow := max(minFlow, s.pressure.Norm()*(1-s.viscosity.Norm())*s.volume.Norm())
 
 	percentHeatAbsorbed := flow * s.coolantFluid.HeatAbsorptionRate
 
@@ -86,7 +87,9 @@ func (s *CoolantCore) Tick(input CoolantInput) CoolantOutput {
 	temperatureDelta := normalizeLoad * percentHeatAbsorbed
 	temperatureDelta = utils.Clamp(-s.coolantFluid.MaxTemperatureDelta, temperatureDelta, s.coolantFluid.MaxTemperatureDelta)
 
-	s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	if temperatureDelta > 0 {
+		s.temperature.SetNorm(s.temperature.Norm() + temperatureDelta)
+	}
 
 	if s.temperature.Norm() >= 1.0 {
 		s.volume.SetNorm(s.volume.Norm() - volumeLossPerTick)

@@ -15,7 +15,7 @@ func main() {
 	logging.Init("logging/logs/debug.log", startTick)
 
 	generator := power.NewGenerator(materials.NewSteel(), 25.0)
-	coolant := cooling.NewCoolantLoop(materials.NewPropyleneGlycol(), materials.NewSteel())
+	coolant := cooling.NewCoolantLoop(materials.NewWater(), materials.NewSteel())
 	hvac := machines.NewHvac(25.0)
 	scrubber := machines.NewScrubber()
 	lifeSupport := machines.NewLifeSupport()

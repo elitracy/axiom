@@ -34,8 +34,8 @@ func NewWater() Fluid {
 			return 1 - utils.Tanh(x, 4.2, 0)
 		},
 
-		HeatAbsorptionRate:   0.02,
-		MaxTemperatureDelta:  0.04,
+		HeatAbsorptionRate:   0.03,
+		MaxTemperatureDelta:  0.05,
 		ThermalExpansionRate: 0.8,
 	}
 
@@ -50,8 +50,8 @@ func NewPropyleneGlycol() Fluid {
 		MaxTemperature:       180.0,
 		MinViscosity:         1.0,
 		MaxViscosity:         50.0,
-		HeatAbsorptionRate:   0.01,
-		MaxTemperatureDelta:  0.02,
+		HeatAbsorptionRate:   0.05,
+		MaxTemperatureDelta:  0.08,
 		ThermalExpansionRate: 0.4,
 	}
 

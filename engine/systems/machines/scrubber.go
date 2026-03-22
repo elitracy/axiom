@@ -5,14 +5,21 @@ import (
 
 	"github.com/elias/axiom/engine/systems"
 	"github.com/elias/axiom/engine/systems/components"
+	"github.com/elias/axiom/engine/utils"
 )
 
 const (
-	o2ConsumptionRate  = 0.002
+	o2ConsumptionRate  = 0.008
 	co2ProductionRatio = 0.8
 
-	targetCo2 = 0.03
+	targetCO2 = 0.03
 	targetO2  = 0.21
+
+	minO2 = 0.1
+	maxO2 = 0.3
+
+	minCO2 = 0.0
+	maxCO2 = 0.08
 )
 
 type ScrubberInput struct {
@@ -21,6 +28,8 @@ type ScrubberInput struct {
 
 type ScrubberOutput struct {
 	Status systems.Status
+	O2     float64
+	CO2    float64
 }
 
 type Scrubber struct {
@@ -31,17 +40,21 @@ type Scrubber struct {
 	co2    components.Component
 
 	scrubberRate  float64
-	requiredPower float64
+	powerCapacity float64
 }
 
 func NewScrubber() *Scrubber {
+
+	targetO2Norm := (targetO2 - minO2) / (maxO2 - minO2)
+	targetCO2Norm := (targetCO2 - minCO2) / (maxCO2 - minCO2)
+
 	system := &Scrubber{
 		SystemCore:    systems.NewSystemCore("Life Support"),
 		health:        components.NewHealthComponent(1.0),
-		o2:            components.NewComponent("O2 (%)", targetO2, 0.1, 0.3),
-		co2:           components.NewComponent("CO2 (%)", targetCo2, 0.0, 0.08),
+		o2:            components.NewComponent("O2 (%)", targetO2Norm, minO2, maxO2),
+		co2:           components.NewComponent("CO2 (%)", targetCO2Norm, minCO2, maxCO2),
 		scrubberRate:  o2ConsumptionRate * co2ProductionRatio,
-		requiredPower: 600.0,
+		powerCapacity: 600.0,
 	}
 
 	return system
@@ -66,30 +79,22 @@ func (s *Scrubber) Tick(input ScrubberInput) ScrubberOutput {
 	s.o2.SetNorm(s.o2.Norm() - o2ConsumptionRate)
 	s.co2.SetNorm(s.co2.Norm() + o2ConsumptionRate*co2ProductionRatio)
 
-	output := ScrubberOutput{
-		Status: s.Status(),
-	}
-
-	effectiveness := 1.0
-
-	switch {
-	case input.PowerAvailable <= 0.0:
-		effectiveness = 0.0
-	case input.PowerAvailable <= s.requiredPower*.8:
-		effectiveness = 0.7
-	default:
-		effectiveness = 1.0
-	}
+	effectiveness := input.PowerAvailable / max(s.powerCapacity, 1)
+	effectiveness = utils.Clamp(0, effectiveness, 1)
 
 	co2Removed := s.scrubberRate * effectiveness
 	s.co2.SetNorm(s.co2.Norm() - co2Removed)
 	s.o2.SetNorm(s.o2.Norm() + s.scrubberRate/co2ProductionRatio*effectiveness)
 
+	output := ScrubberOutput{
+		Status: s.Status(),
+		O2:     s.o2.Value(),
+		CO2:    s.co2.Value(),
+	}
 	return output
 }
 
 func (s *Scrubber) String() string {
-
 	output := fmt.Sprintf("%v: %v", s.ID(), s.Name())
 	output += fmt.Sprintf("\n%s", s.o2)
 	output += fmt.Sprintf("\n%s", s.co2)

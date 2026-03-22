@@ -247,7 +247,6 @@ func TestHvacTick_PowerHeatTargetTemps(t *testing.T) {
 
 			assert.InDelta(t, hvac.temperature.Value(), tt.expected, 2)
 		})
-
 	}
 
 }

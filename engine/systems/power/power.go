@@ -95,7 +95,7 @@ func (s *PowerCore) Tick(input PowerInput) PowerOutput {
 		s.temperature.SetNorm(s.temperature.Norm() - s.housingMaterial.HeatAbsorptionRate)
 	}
 
-	if s.temperature.Value() >= 1.0 {
+	if s.temperature.Norm() >= 1.0 {
 		s.health.SetNorm(s.health.Norm() - healthLostPerTick)
 	}
 

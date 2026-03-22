@@ -9,7 +9,7 @@ import (
 
 func TestGenerator_NewGenerator(t *testing.T) {
 
-	generator := NewGenerator(testMetal(), 20.0)
+	generator := NewGenerator(testMetalNeutral(), 20.0)
 
 	assert.Equal(t, generator.Power().Norm(), 0.0)
 	assert.Equal(t, generator.Fuel().Norm(), 1.0)
@@ -18,7 +18,7 @@ func TestGenerator_NewGenerator(t *testing.T) {
 }
 
 func TestGenerator_Tick(t *testing.T) {
-	generator := NewGenerator(testMetal(), 20.0)
+	generator := NewGenerator(testMetalNeutral(), 20.0)
 
 	input := testInput()
 

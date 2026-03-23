@@ -8,19 +8,21 @@ import (
 
 func main() {
 
-	dir := filesystem.NewDirNode("TOP")
-	subDirA := filesystem.NewDirNode("subDirA")
-	subDirC := filesystem.NewDirNode("subDirC")
-	subDirA.AddChild("fileC", filesystem.NewFileNode("fileC"))
-	subDirA.AddChild("subDirC", subDirC)
+	home := filesystem.NewNode("root/")
+	systems := filesystem.NewNode("systems/")
+	sensors := filesystem.NewNode("sensors/")
 
-	subDirC.AddChild("fileD", filesystem.NewFileNode("fileD"))
+	home.AddChild(systems)
+	home.AddChild(sensors)
 
-	dir.AddChild("subDirA", subDirA)
-	dir.AddChild("subDirB", filesystem.NewDirNode("subDirB"))
-	dir.AddChild("fileA", filesystem.NewFileNode("fileA"))
-	dir.AddChild("fileB", filesystem.NewFileNode("fileB"))
+	power := filesystem.NewNode("power/")
+	coolant := filesystem.NewNode("coolant/")
+	lifesupport := filesystem.NewNode("life_support/")
 
-	ls := dir.Ls("subDirA/..")
+	systems.AddChild(power)
+	systems.AddChild(coolant)
+	systems.AddChild(lifesupport)
+
+	ls := home.Ls("")
 	log.Printf("\n" + ls)
 }

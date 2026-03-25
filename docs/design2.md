@@ -17,13 +17,20 @@ type SubSystem interface {
     ID() SubSystemID
     Name() string
     Effort() float64 // rate of generation
-    Inputs() []Component // temperature, power, etc
-    Outputs() []Component // tempertuare, power, etc
-    Sensors() map[string]string
+    Inputs() []ComponentType // temperature, power, etc
+    Outputs() []ComponentType // tempertuare, power, etc
+    Sensors() map[componentType]Component
+
+    Tick(inputs map[ComponentType]Component)
+}
+
+type Component interface {
+    Type() ComponentType
+    Value() float64
 }
 
 type ComponentConnection struct {
-    Component
+    ComponentID
     SubSystemID
 }
 
@@ -37,3 +44,17 @@ HVAC[0] -> Power[1] -> Cooling[2]
     (1, elec)    (2, temp)
     (1, temp)    (2, temp)
 ```
+
+### Power 
+
+coolTemp = 0
+coolRate = -0.05
+maxHeatDelta = 10
+effort = 0.5
+```
+
+cooling = (coolTemp - currentTemp) * coolRate
+heating = maxHeatDelta * effort
+```
+
+With an effort of .5 you can balance heat and cooling. Above that you start heating more every tick.

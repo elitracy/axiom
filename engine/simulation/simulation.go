@@ -2,42 +2,27 @@ package simulation
 
 import (
 	"github.com/elias/axiom/engine"
-	"github.com/elias/axiom/engine/logging"
-	"github.com/elias/axiom/engine/systems/cooling"
-	"github.com/elias/axiom/engine/systems/machines"
-	"github.com/elias/axiom/engine/systems/power"
+	"github.com/elias/axiom/engine/subsystems"
+	"github.com/elias/axiom/engine/subsystems/components"
 )
 
-type WorldState struct {
-	Power       power.Power
-	Coolant     cooling.Coolant
-	LifeSupport *machines.LifeSupport
-	Hvac        *machines.Hvac
-	Scrubber    *machines.Scrubber
+type subsystemConnection struct {
+	componentID components.ComponentID
+	subsystemID subsystems.SubsystemID
 }
 
-var lastCoolantOut cooling.CoolantOutput
-var lastHvacOut machines.HvacOutput
+type WorldState struct {
+	subsystems   map[subsystems.SubsystemID]subsystems.Subsystem
+	dependencies map[subsystems.SubsystemID][]subsystemConnection
+}
 
 func (ws *WorldState) Update(tick *engine.Tick) {
 
-	var heatSources []float64
+	power := subsystems.NewPower(.5)
+	cooling := subsystems.NewCooling(.5)
+	hvac := subsystems.NewHvac()
 
-	powerOut := ws.Power.Tick(power.PowerInput{CoolantTemperature: lastCoolantOut.Temperature, AmbientTemperature: lastHvacOut.Temperature})
-	coolantOut := ws.Coolant.Tick(cooling.CoolantInput{LoadTemperature: powerOut.Temperature, AmbientTemp: lastHvacOut.Temperature})
-
-	heatSources = append(heatSources, powerOut.Temperature)
-
-	hvacOut := ws.Hvac.Tick(machines.HvacInput{PowerSupplied: powerOut.Power * .5, HeatSources: heatSources})
-	scrubberOut := ws.Scrubber.Tick(machines.ScrubberInput{PowerAvailable: powerOut.Power * .25})
-	ws.LifeSupport.Tick(machines.LifeSupportInput{PowerAvailable: powerOut.Power * .25, TemperatureStatus: hvacOut.Status, OxygenStatus: scrubberOut.Status})
-
-	lastCoolantOut = coolantOut
-	lastHvacOut = hvacOut
-
-	logging.Info("%s", ws.Power.String())
-	logging.Info("%s", ws.Coolant.String())
-	logging.Info("%s", ws.Hvac.String())
-	// logging.Info("%s", ws.Scrubber.String())
-	// logging.Info("%s", ws.LifeSupport.String())
+	ws.subsystems[power.ID()] = power
+	ws.subsystems[cooling.ID()] = cooling
+	ws.subsystems[hvac.ID()] = hvac
 }

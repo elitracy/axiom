@@ -14,10 +14,12 @@ func newComponentID() ComponentID {
 	return id
 }
 
+//go:generate stringer -type=ComponentType
 const (
 	Temperature ComponentType = iota
 	Effort
 	Power
+	Flow
 )
 
 type Component struct {
@@ -38,4 +40,9 @@ func (c Component) Type() ComponentType                   { return c.componentTy
 func (c Component) Value() utils.Norm                     { return c.value }
 func (c *Component) SetValue(value utils.Norm) *Component { c.value = value; return c }
 
-func (c *Component) AddValue(value utils.Norm) *Component { c.value += value; return c }
+func (c *Component) AddValue(value utils.Norm) *Component {
+	c.value += value
+	c.value = c.value.Clamp()
+
+	return c
+}

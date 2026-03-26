@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
@@ -19,7 +20,6 @@ type WorldState struct {
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 	ws.subsystems[subsystem.ID()] = subsystem
-	ws.dependencies[subsystem.ID()] = make([]subsystemConnection, 0)
 }
 
 func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compType components.ComponentType) {
@@ -28,27 +28,41 @@ func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compTyp
 		component: dep.Components()[compType],
 	}
 
-	ws.dependencies[subsystem.ID()] = append(ws.dependencies[subsystem.ID()], connection)
+	if _, ok := ws.dependencies[subsystem.ID()]; ok {
+		ws.dependencies[subsystem.ID()] = append(ws.dependencies[subsystem.ID()], connection)
+
+	}
 }
 
 func (ws *WorldState) Init() {
+
+	ws.subsystems = make(map[subsystems.SubsystemID]subsystems.Subsystem)
+	ws.dependencies = make(map[subsystems.SubsystemID][]subsystemConnection)
+
 	power := subsystems.NewPower(.5)
+	power2 := subsystems.NewPower(.8)
 	cooling := subsystems.NewCooling(.5)
 	hvac := subsystems.NewHvac()
 
 	ws.addSubsystem(power)
+	ws.addSubsystem(power2)
 	ws.addSubsystem(cooling)
 	ws.addSubsystem(hvac)
 
 	ws.addDependency(hvac, power, components.Power)
 	ws.addDependency(hvac, power, components.Temperature)
+	ws.addDependency(hvac, power2, components.Temperature)
 	ws.addDependency(power, cooling, components.Temperature)
+	ws.addDependency(power, cooling, components.Flow)
 }
 
 // updates the world state
 func (ws *WorldState) Update(tick *engine.Tick) {
 
 	ws.updateSubsystems()
+	for systemID := range len(ws.subsystems) {
+		logging.Info(ws.subsystems[subsystems.SubsystemID(systemID)].String())
+	}
 }
 
 // iterates through the dependency tree for subsystems using DFS
@@ -79,9 +93,9 @@ func (ws *WorldState) updateSubsystems() {
 			}
 		}
 
-		inputs := make(map[components.ComponentType]*components.Component)
+		inputs := make(map[components.ComponentType][]*components.Component, 0)
 		for _, dep := range ws.dependencies[system.ID()] {
-			inputs[dep.component.Type()] = dep.component
+			inputs[dep.component.Type()] = append(inputs[dep.component.Type()], dep.component)
 		}
 		system.Tick(inputs)
 

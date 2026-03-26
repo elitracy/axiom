@@ -1,12 +1,10 @@
 package subsystems
 
 import (
+	"fmt"
+
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
-)
-
-const (
-	coolingCoef utils.Norm = -0.5
 )
 
 var currentSubsystemID = 0
@@ -25,11 +23,13 @@ type Subsystem interface {
 	Effort() utils.Norm
 	Components() map[components.ComponentType]*components.Component
 	AddComponent(components.ComponentType, utils.Norm)
+	String() string
 
-	Tick(inputs map[components.ComponentType]*components.Component)
+	Tick(inputs map[components.ComponentType][]*components.Component)
 }
 
 type subsystemCore struct {
+	Subsystem
 	id         SubsystemID
 	name       string
 	components map[components.ComponentType]*components.Component
@@ -52,4 +52,15 @@ func (s *subsystemCore) Components() map[components.ComponentType]*components.Co
 func (s *subsystemCore) AddComponent(componentType components.ComponentType, value utils.Norm) {
 	component := components.NewComponent(componentType, value)
 	s.components[componentType] = component
+}
+
+func (s subsystemCore) String() string {
+
+	output := fmt.Sprintf("%v[%v]", s.name, s.id)
+
+	for _, comp := range s.components {
+		output += fmt.Sprintf("\n%v: %.2f", comp.Type(), comp.Value())
+	}
+
+	return output
 }

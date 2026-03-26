@@ -1,6 +1,7 @@
 package subsystems
 
 import (
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -12,7 +13,7 @@ type Hvac struct {
 
 func NewHvac() *Hvac {
 	hvac := &Hvac{
-		subsystemCore: newSubsystemCore("Cooling"),
+		subsystemCore: newSubsystemCore("HVAC"),
 		targetTemp:    utils.Norm(.2),
 	}
 	hvac.AddComponent(components.Temperature, hvac.targetTemp)
@@ -22,15 +23,20 @@ func NewHvac() *Hvac {
 
 func (s *Hvac) Effort() utils.Norm { return s.components[components.Effort].Value() }
 
-func (s *Hvac) Tick(inputs map[components.ComponentType]*components.Component) {
+func (s *Hvac) Tick(inputs map[components.ComponentType][]*components.Component) {
 	power := utils.Norm(0.0)
-	if effort, ok := inputs[components.Effort]; ok {
-		power = effort.Value()
+	if powers, ok := inputs[components.Power]; ok {
+		for _, p := range powers {
+			power += p.Value()
+		}
+
 	}
 
 	heat := utils.Norm(0.0)
-	if temp, ok := inputs[components.Temperature]; ok {
-		heat = temp.Value()
+	if temps, ok := inputs[components.Temperature]; ok {
+		for _, t := range temps {
+			heat += t.Value()
+		}
 	}
 
 	currentTemp := s.components[components.Temperature].Value()
@@ -44,5 +50,9 @@ func (s *Hvac) Tick(inputs map[components.ComponentType]*components.Component) {
 
 func calcHvacHeatDelta(targetTemp, heat, rate utils.Norm) utils.Norm {
 	cooling := (heat - targetTemp) * -rate
+	logging.Info("h: %.2f", heat)
+	logging.Info("t: %.2f", targetTemp)
+	logging.Info("r: %.2f", rate)
+	logging.Info("delta: %.2f", cooling)
 	return cooling
 }

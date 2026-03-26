@@ -1,6 +1,7 @@
 package subsystems
 
 import (
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -14,26 +15,36 @@ func NewPower(initPower utils.Norm) *Power {
 		subsystemCore: newSubsystemCore("Power"),
 	}
 
-	power.AddComponent(components.Effort, initPower)
-
+	power.AddComponent(components.Power, initPower)
+	power.AddComponent(components.Temperature, 0)
 	return power
 }
 
-func (s *Power) Effort() utils.Norm { return s.components[components.Effort].Value() }
+func (s *Power) Effort() utils.Norm { return s.components[components.Power].Value() }
 
-func (s *Power) Tick(inputs map[components.ComponentType]*components.Component) {
-	cooling := utils.Norm(0.0)
-	if coolant, ok := inputs[components.Temperature]; ok {
-		cooling = coolant.Value()
+func (s *Power) Tick(inputs map[components.ComponentType][]*components.Component) {
+	coolantTemp := utils.Norm(0.0)
+	if temps, ok := inputs[components.Temperature]; ok {
+		for _, t := range temps {
+			coolantTemp += t.Value()
+		}
 	}
 
-	delta := calcPowerTempDelta(s.components[components.Temperature].Value(), cooling, coolingCoef, s.components[components.Effort].Value())
+	coolantFlow := utils.Norm(0.0)
+	if flows, ok := inputs[components.Flow]; ok {
+		for _, f := range flows {
+			coolantFlow += f.Value()
+		}
+	}
+
+	delta := calcPowerTempDelta(s.components[components.Temperature].Value(), coolantTemp, coolantFlow, s.components[components.Power].Value())
+	logging.Info("DELTA: %.2f", delta)
 
 	s.components[components.Temperature].AddValue(delta)
 }
 
 func calcPowerTempDelta(currentTemp, coolantTemp, coolingRate, heatRate utils.Norm) utils.Norm {
-	cooling := (currentTemp - coolantTemp) * coolingRate
+	cooling := (currentTemp + coolantTemp) * -coolingRate
 
 	return min(heatRate+cooling, heatRate)
 }

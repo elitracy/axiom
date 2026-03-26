@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"fmt"
-	"log"
 	"slices"
 	"strings"
 )
@@ -69,7 +68,6 @@ func NewNode(path string) *Node {
 	}
 
 	if isDir {
-		log.Printf("NODE: %v", node.name)
 		node.children = make(map[string]*Node)
 
 	}

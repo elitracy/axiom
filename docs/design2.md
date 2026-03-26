@@ -42,7 +42,7 @@ type System struct {
 
 HVAC[0] -> Power[1] -> Cooling[2]
     (1, elec)    (2, temp)
-    (1, temp)    (2, temp)
+    (1, temp)    
 ```
 
 ### Power 

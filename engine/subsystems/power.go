@@ -1,7 +1,6 @@
 package subsystems
 
 import (
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -38,7 +37,6 @@ func (s *Power) Tick(inputs map[components.ComponentType][]*components.Component
 	}
 
 	delta := calcPowerTempDelta(s.components[components.Temperature].Value(), coolantTemp, coolantFlow, s.components[components.Power].Value())
-	logging.Info("DELTA: %.2f", delta)
 
 	s.components[components.Temperature].AddValue(delta)
 }

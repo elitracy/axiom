@@ -41,6 +41,7 @@ func (s *Hvac) Tick(inputs map[components.ComponentType][]*components.Component)
 
 	currentTemp := s.components[components.Temperature].Value()
 	delta := calcHvacHeatDelta(s.targetTemp, heat, power)
+	logging.Info("DELTA: %2.f", delta)
 
 	if currentTemp != s.targetTemp {
 		s.components[components.Temperature].AddValue(delta)
@@ -50,9 +51,5 @@ func (s *Hvac) Tick(inputs map[components.ComponentType][]*components.Component)
 
 func calcHvacHeatDelta(targetTemp, heat, rate utils.Norm) utils.Norm {
 	cooling := (heat - targetTemp) * -rate
-	logging.Info("h: %.2f", heat)
-	logging.Info("t: %.2f", targetTemp)
-	logging.Info("r: %.2f", rate)
-	logging.Info("delta: %.2f", cooling)
 	return cooling
 }

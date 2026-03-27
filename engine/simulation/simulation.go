@@ -20,6 +20,7 @@ type WorldState struct {
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 	ws.subsystems[subsystem.ID()] = subsystem
+	ws.dependencies[subsystem.ID()] = []subsystemConnection{}
 }
 
 func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compType components.ComponentType) {
@@ -30,7 +31,6 @@ func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compTyp
 
 	if _, ok := ws.dependencies[subsystem.ID()]; ok {
 		ws.dependencies[subsystem.ID()] = append(ws.dependencies[subsystem.ID()], connection)
-
 	}
 }
 
@@ -40,20 +40,22 @@ func (ws *WorldState) Init() {
 	ws.dependencies = make(map[subsystems.SubsystemID][]subsystemConnection)
 
 	power := subsystems.NewPower(.5)
-	power2 := subsystems.NewPower(.8)
+	// power2 := subsystems.NewPower(.5)
 	cooling := subsystems.NewCooling(.5)
 	hvac := subsystems.NewHvac()
 
 	ws.addSubsystem(power)
-	ws.addSubsystem(power2)
+	// ws.addSubsystem(power2)
 	ws.addSubsystem(cooling)
 	ws.addSubsystem(hvac)
 
 	ws.addDependency(hvac, power, components.Power)
 	ws.addDependency(hvac, power, components.Temperature)
-	ws.addDependency(hvac, power2, components.Temperature)
+	// ws.addDependency(hvac, power2, components.Temperature)
 	ws.addDependency(power, cooling, components.Temperature)
 	ws.addDependency(power, cooling, components.Flow)
+	// ws.addDependency(power2, cooling, components.Temperature)
+	// ws.addDependency(power2, cooling, components.Flow)
 }
 
 // updates the world state

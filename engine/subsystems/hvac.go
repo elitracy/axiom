@@ -1,9 +1,14 @@
 package subsystems
 
 import (
-	"github.com/elias/axiom/engine/logging"
+	"math"
+
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
+)
+
+const (
+	hvacHeatingRate = 0.5
 )
 
 type Hvac struct {
@@ -21,7 +26,7 @@ func NewHvac() *Hvac {
 	return hvac
 }
 
-func (s *Hvac) Effort() utils.Norm { return s.components[components.Effort].Value() }
+func (s *Hvac) Effort() utils.Norm { return s.components[components.Temperature].Value() }
 
 func (s *Hvac) Tick(inputs map[components.ComponentType][]*components.Component) {
 	power := utils.Norm(0.0)
@@ -38,18 +43,24 @@ func (s *Hvac) Tick(inputs map[components.ComponentType][]*components.Component)
 			heat += t.Value()
 		}
 	}
+	heatDelta := calcHvacHeatDelta(s.targetTemp, heat, hvacHeatingRate)
+
+	s.components[components.Temperature].AddValue(heatDelta)
 
 	currentTemp := s.components[components.Temperature].Value()
-	delta := calcHvacHeatDelta(s.targetTemp, heat, power)
-	logging.Info("DELTA: %2.f", delta)
+	diff := utils.Norm(math.Abs(float64(s.targetTemp - currentTemp)))
+	coolDelta := min(power, diff)
 
-	if currentTemp != s.targetTemp {
-		s.components[components.Temperature].AddValue(delta)
+	switch {
+	case currentTemp < s.targetTemp:
+		s.components[components.Temperature].AddValue(coolDelta)
+	case currentTemp > s.targetTemp:
+		s.components[components.Temperature].AddValue(-coolDelta)
 	}
 
 }
 
 func calcHvacHeatDelta(targetTemp, heat, rate utils.Norm) utils.Norm {
-	cooling := (heat - targetTemp) * -rate
-	return cooling
+	heating := (heat - targetTemp) * rate
+	return heating
 }

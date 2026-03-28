@@ -39,23 +39,18 @@ func (ws *WorldState) Init() {
 	ws.subsystems = make(map[subsystems.SubsystemID]subsystems.Subsystem)
 	ws.dependencies = make(map[subsystems.SubsystemID][]subsystemConnection)
 
-	power := subsystems.NewPower(.5)
-	// power2 := subsystems.NewPower(.5)
+	power := subsystems.NewPower(.1)
 	cooling := subsystems.NewCooling(.5)
 	hvac := subsystems.NewHvac()
 
 	ws.addSubsystem(power)
-	// ws.addSubsystem(power2)
 	ws.addSubsystem(cooling)
 	ws.addSubsystem(hvac)
 
 	ws.addDependency(hvac, power, components.Power)
 	ws.addDependency(hvac, power, components.Temperature)
-	// ws.addDependency(hvac, power2, components.Temperature)
 	ws.addDependency(power, cooling, components.Temperature)
 	ws.addDependency(power, cooling, components.Flow)
-	// ws.addDependency(power2, cooling, components.Temperature)
-	// ws.addDependency(power2, cooling, components.Flow)
 }
 
 // updates the world state

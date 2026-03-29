@@ -5,29 +5,25 @@ import (
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
+	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
 
-type subsystemConnection struct {
-	component *components.Component
-	id        subsystems.SubsystemID
-}
-
 type WorldState struct {
 	subsystems   map[subsystems.SubsystemID]subsystems.Subsystem
-	dependencies map[subsystems.SubsystemID][]subsystemConnection
+	ports        map[subsystems.SubsystemID][]*connections.Port
+	dependencies map[subsystems.SubsystemID][]*connections.Connection
 }
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 	ws.subsystems[subsystem.ID()] = subsystem
-	ws.dependencies[subsystem.ID()] = []subsystemConnection{}
+	ws.dependencies[subsystem.ID()] = []*connections.Connection{}
 }
 
 func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compType components.ComponentType) {
-	connection := subsystemConnection{
-		id:        dep.ID(),
-		component: dep.Components()[compType],
-	}
+	connection := connections.NewConnection(
+		dep,
+	)
 
 	if _, ok := ws.dependencies[subsystem.ID()]; ok {
 		ws.dependencies[subsystem.ID()] = append(ws.dependencies[subsystem.ID()], connection)

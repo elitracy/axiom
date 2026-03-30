@@ -5,41 +5,57 @@ import (
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
+	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
 
-type subsystemConnection struct {
-	component *components.Component
-	id        subsystems.SubsystemID
-}
-
 type WorldState struct {
-	subsystems   map[subsystems.SubsystemID]subsystems.Subsystem
-	dependencies map[subsystems.SubsystemID][]subsystemConnection
+	subsystems  map[subsystems.SubsystemID]subsystems.Subsystem
+	connections map[subsystems.SubsystemID][]*connections.Connection
+	ports       map[connections.PortID]subsystems.SubsystemID
 }
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 	ws.subsystems[subsystem.ID()] = subsystem
-	ws.dependencies[subsystem.ID()] = []subsystemConnection{}
+	ws.connections[subsystem.ID()] = []*connections.Connection{}
+
 }
 
-func (ws *WorldState) addDependency(subsystem, dep subsystems.Subsystem, compType components.ComponentType) {
-	connection := subsystemConnection{
-		id:        dep.ID(),
-		component: dep.Components()[compType],
+func (ws *WorldState) AddPort(name string, subsystemID subsystems.SubsystemID, component *components.Component) *connections.Port {
+	subsystem, exists := ws.subsystems[subsystemID]
+	if !exists {
+		return nil
 	}
 
-	if _, ok := ws.dependencies[subsystem.ID()]; ok {
-		ws.dependencies[subsystem.ID()] = append(ws.dependencies[subsystem.ID()], connection)
+	if _, exists := subsystem.Components()[component.Name()]; !exists {
+		return nil
 	}
+
+	port := connections.NewPort(name, component)
+
+	ws.ports[port.ID()] = subsystemID
+
+	return port
+}
+
+func (ws *WorldState) addConnection(src *connections.Port, subsystemID subsystems.SubsystemID, throughput utils.Norm) {
+	connection := connections.NewConnection(src, subsystemID, throughput)
+
+	_, exists := ws.ports[src.ID()]
+	if !exists {
+		return
+	}
+
+	ws.connections[subsystemID] = append(ws.connections[subsystemID], connection)
 }
 
 func (ws *WorldState) Init() {
 
 	ws.subsystems = make(map[subsystems.SubsystemID]subsystems.Subsystem)
-	ws.dependencies = make(map[subsystems.SubsystemID][]subsystemConnection)
+	ws.connections = make(map[subsystems.SubsystemID][]*connections.Connection)
+	ws.ports = make(map[connections.PortID]subsystems.SubsystemID)
 
-	power := subsystems.NewPower(.1)
+	power := subsystems.NewPower(.5)
 	cooling := subsystems.NewCooling(.5)
 	hvac := subsystems.NewHvac()
 
@@ -47,10 +63,15 @@ func (ws *WorldState) Init() {
 	ws.addSubsystem(cooling)
 	ws.addSubsystem(hvac)
 
-	ws.addDependency(hvac, power, components.Power)
-	ws.addDependency(hvac, power, components.Temperature)
-	ws.addDependency(power, cooling, components.Temperature)
-	ws.addDependency(power, cooling, components.Flow)
+	powerPort := ws.AddPort("socket-1", power.ID(), power.Components()["power"])
+	powerTemp := ws.AddPort("valve-1", power.ID(), power.Components()["temp"])
+	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp-out"])
+	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow-out"])
+
+	ws.addConnection(powerPort, hvac.ID(), .5)
+	ws.addConnection(powerTemp, hvac.ID(), 1)
+	ws.addConnection(coolingFlowPort, power.ID(), 1)
+	ws.addConnection(coolingTempPort, power.ID(), 1)
 }
 
 // updates the world state
@@ -62,7 +83,7 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 	}
 }
 
-// iterates through the dependency tree for subsystems using DFS
+// iterates through the connection dependency tree for subsystems using DFS
 func (ws *WorldState) updateSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
@@ -77,22 +98,25 @@ func (ws *WorldState) updateSubsystems() {
 			}
 
 			visited[subsystem.ID()] = struct{}{}
-			if len(ws.dependencies[subsystem.ID()]) <= 0 {
+			if len(ws.connections[subsystem.ID()]) <= 0 {
 				subsystem.Tick(nil)
 			}
 
-			for _, dep := range ws.dependencies[subsystem.ID()] {
-				if _, seen := visited[dep.id]; !seen {
-					subsystem := ws.subsystems[dep.id]
+			for _, conn := range ws.connections[subsystem.ID()] {
+				srcID := ws.ports[conn.Src().ID()]
+				if _, seen := visited[srcID]; !seen {
+					subsystem := ws.subsystems[srcID]
 					depStack.Push(subsystem)
 
 				}
 			}
 		}
 
-		inputs := make(map[components.ComponentType][]*components.Component, 0)
-		for _, dep := range ws.dependencies[system.ID()] {
-			inputs[dep.component.Type()] = append(inputs[dep.component.Type()], dep.component)
+		inputs := make(map[components.ComponentType][]components.Component, 0)
+		for _, conn := range ws.connections[system.ID()] {
+			srcComp := *conn.Src().Component()
+			srcComp.SetValue(srcComp.Value() * conn.Throughput())
+			inputs[srcComp.Type()] = append(inputs[srcComp.Type()], srcComp)
 		}
 		system.Tick(inputs)
 

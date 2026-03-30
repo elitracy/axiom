@@ -14,14 +14,14 @@ func NewPower(initPower utils.Norm) *Power {
 		subsystemCore: newSubsystemCore("Power"),
 	}
 
-	power.AddComponent(components.Power, initPower)
-	power.AddComponent(components.Temperature, 0)
+	power.AddComponent("power", components.Power, initPower)
+	power.AddComponent("temp", components.Temperature, 0)
 	return power
 }
 
-func (s *Power) Effort() utils.Norm { return s.components[components.Power].Value() }
+func (s *Power) Effort() utils.Norm { return s.components["power"].Value() }
 
-func (s *Power) Tick(inputs map[components.ComponentType][]*components.Component) {
+func (s *Power) Tick(inputs map[components.ComponentType][]components.Component) {
 	coolantTemp := utils.Norm(0.0)
 	if temps, ok := inputs[components.Temperature]; ok {
 		for _, t := range temps {
@@ -36,9 +36,9 @@ func (s *Power) Tick(inputs map[components.ComponentType][]*components.Component
 		}
 	}
 
-	delta := calcPowerTempDelta(s.components[components.Temperature].Value(), coolantTemp, coolantFlow, s.components[components.Power].Value())
+	delta := calcPowerTempDelta(s.components["temp"].Value(), coolantTemp, coolantFlow, s.components["power"].Value())
 
-	s.components[components.Temperature].AddValue(delta)
+	s.components["temp"].AddValue(delta)
 }
 
 func calcPowerTempDelta(currentTemp, coolantTemp, coolingRate, heatRate utils.Norm) utils.Norm {

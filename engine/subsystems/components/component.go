@@ -24,21 +24,25 @@ const (
 
 type Component struct {
 	id            ComponentID
+	name          string
 	componentType ComponentType
 	value         utils.Norm
 }
 
-func NewComponent(componentType ComponentType, value utils.Norm) *Component {
+func NewComponent(name string, componentType ComponentType, value utils.Norm) *Component {
 	return &Component{
 		id:            newComponentID(),
+		name:          name,
 		componentType: componentType,
 		value:         value,
 	}
 }
 
+func (c Component) ID() ComponentID                       { return c.id }
 func (c Component) Type() ComponentType                   { return c.componentType }
+func (c Component) Name() string                          { return c.name }
 func (c Component) Value() utils.Norm                     { return c.value }
-func (c *Component) SetValue(value utils.Norm) *Component { c.value = value; return c }
+func (c *Component) SetValue(value utils.Norm) *Component { c.value = value.Clamp(); return c }
 
 func (c *Component) AddValue(value utils.Norm) *Component {
 	c.value += value

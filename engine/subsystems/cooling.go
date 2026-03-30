@@ -14,12 +14,12 @@ func NewCooling(initEffort utils.Norm) *Cooling {
 		subsystemCore: newSubsystemCore("Cooling"),
 	}
 
-	cooling.AddComponent(components.Flow, initEffort)
-	cooling.AddComponent(components.Temperature, 0.5)
+	cooling.AddComponent("flow-out", components.Flow, initEffort)
+	cooling.AddComponent("temp-out", components.Temperature, 0.5)
 
 	return cooling
 }
 
-func (s *Cooling) Effort() utils.Norm { return s.components[components.Temperature].Value() }
+func (s *Cooling) Effort() utils.Norm { return s.components["flow-out"].Value() }
 
-func (s *Cooling) Tick(inputs map[components.ComponentType][]*components.Component) {}
+func (s *Cooling) Tick(inputs map[components.ComponentType][]components.Component) {}

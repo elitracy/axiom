@@ -21,45 +21,45 @@ type Subsystem interface {
 	ID() SubsystemID
 	Name() string
 	Effort() utils.Norm
-	Components() map[components.ComponentType]*components.Component
-	AddComponent(components.ComponentType, utils.Norm)
+	Components() map[string]*components.Component
+	AddComponent(string, components.ComponentType, utils.Norm)
 	String() string
 
-	Tick(inputs map[components.ComponentType][]*components.Component)
+	Tick(inputs map[components.ComponentType][]components.Component)
 }
 
 type subsystemCore struct {
 	Subsystem
 	id         SubsystemID
 	name       string
-	components map[components.ComponentType]*components.Component
+	components map[string]*components.Component
 }
 
 func newSubsystemCore(name string) *subsystemCore {
 	return &subsystemCore{
 		id:         newID(),
 		name:       name,
-		components: make(map[components.ComponentType]*components.Component),
+		components: make(map[string]*components.Component),
 	}
 }
 
 func (s *subsystemCore) ID() SubsystemID { return s.id }
 func (s *subsystemCore) Name() string    { return s.name }
-func (s *subsystemCore) Components() map[components.ComponentType]*components.Component {
+func (s *subsystemCore) Components() map[string]*components.Component {
 	return s.components
 }
 
-func (s *subsystemCore) AddComponent(componentType components.ComponentType, value utils.Norm) {
-	component := components.NewComponent(componentType, value)
-	s.components[componentType] = component
+func (s *subsystemCore) AddComponent(name string, componentType components.ComponentType, value utils.Norm) {
+	component := components.NewComponent(name, componentType, value)
+	s.components[component.Name()] = component
 }
 
 func (s subsystemCore) String() string {
 
-	output := fmt.Sprintf("%v[%v]", s.name, s.id)
+	output := fmt.Sprintf("%s[%d]", s.name, s.id)
 
 	for _, comp := range s.components {
-		output += fmt.Sprintf("\n%v: %.2f", comp.Type(), comp.Value())
+		output += fmt.Sprintf("\n%v[%s]: %.2f", comp.Type(), comp.Name(), comp.Value())
 	}
 
 	return output

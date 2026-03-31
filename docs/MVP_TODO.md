@@ -1,7 +1,9 @@
 # AXIOM Go Engine — MVP Todo
 
-> **Goal:** Build the Go engine that powers the prototype's core loop:
-> *see problem → investigate → fix config/script → watch recovery → something else breaks*
+> **Goal:** Build a playable vertical slice of the core loop:
+> *see problem → diagnose via commands → fix config → monitor recovery → something else breaks*
+>
+> Terminal-only. No Godot integration yet. Validate the fun before building more.
 >
 > **Difficulty:** 1 = straightforward, 2 = moderate, 3 = requires design decisions & iteration
 >
@@ -14,10 +16,8 @@
 ### 1. Project scaffolding
 **Difficulty: 1**
 
-Set up the Go module with packages for simulation, systems, filesystem, and commands. Verify `go build` succeeds. No game logic yet — just the skeleton that compiles.
-
 - [x] `go.mod` initialized
-- [x] Package structure: `simulation/`, `systems/`, `filesystem/`, `commands/`
+- [x] Package structure: `simulation/`, `subsystems/`, `filesystem/`, `commands/`
 - [x] `utils/` package with generic helpers (e.g., `Clamp`)
 - [x] `go build` succeeds
 
@@ -26,171 +26,213 @@ Set up the Go module with packages for simulation, systems, filesystem, and comm
 ### 2. World state & tick loop
 **Difficulty: 2**
 
-Define the core `WorldState` struct that holds all subsystems and a tick counter. Implement `Tick()` which advances the simulation by one step — tick each subsystem with its dependencies, update sensor values. The world tick explicitly wires subsystem inputs/outputs (no generic loop).
-
 - [x] `WorldState` struct (tick count, named subsystem fields)
-- [x] `Subsystem` interface: ID, Name, Health, Status, Sensors, DegradationRate
+- [x] `Subsystem` interface: ID, Name, Effort, Components, Tick
 - [x] `SubsystemCore` embedded struct with shared fields and accessors
-- [x] Status derived from health: >70 Online, 30-70 Degraded, 1-29 Critical, 0 Offline
 - [x] `Tick()` method that updates all subsystems with explicit dependency wiring
-- [x] Unit test: create a world, tick it N times, verify health decreases
+- [x] Unit test: create a world, tick it N times, verify state changes
 
 ---
 
-### 3. Three subsystems: power, coolant, life support
+### 3. Three subsystems: power, coolant, HVAC
 **Difficulty: 2**
 
-Implement the three concrete subsystems with their unique behaviors and per-system `Tick()` signatures. Each receives its dependencies as arguments from the world tick.
-
-- [x] **Power**: `Tick(coolantFlow, ambientTemp)` — consumes fuel scaled by output level, temperature rises from output heat minus coolant dissipation, clamped to bounds
-- [x] **Coolant**: `Tick(heatLoad)` — flow rate derived from pump health and backpressure, pressure accumulates from flow and bleeds passively, temperature uses diminishing returns as coolant temp approaches heat source
-- [x] **Life Support**: `Tick(powerAvailable)` — O2 consumed per tick, scrubber restores O2 and removes CO2 scaled by power available
-- [x] Each subsystem updates its own sensors during tick
-- [x] Unit tests for each subsystem's tick behavior
+- [x] **Power**: temperature rises from output heat, cooled by incoming coolant
+- [x] **Coolant**: outputs flow rate and coolant temperature
+- [x] **HVAC**: regulates ambient temperature using incoming power, affected by incoming heat
+- [x] Each subsystem updates its own components during tick
 
 ---
 
-### 4. Dependency graph
+### 4. Dependency graph & connections
 **Difficulty: 3**
 
-Wire subsystems together in WorldState.Tick() so failures cascade. The wiring is explicit — power's coolant flow comes from coolant's sensor, coolant's heat load comes from power's sensor, life support's power available comes from power's sensor.
-
-- [x] Explicit dependency wiring in WorldState.Tick() (no generic subsystem loop)
-- [x] Power output affects life support and coolant effectiveness
-- [ ] Coolant failure causes power temperature to rise
-- [ ] Power overheating triggers safety throttle (reduced output) then shutdown
-- [ ] Life support effectiveness scales with available power
-- [ ] Integration test: kill coolant → power overheats → life support degrades → O2 drops (the cascade)
+- [x] Connection system: ports on components, connections between subsystems with throughput multiplier
+- [x] DFS-based dependency resolution in WorldState.updateSubsystems()
+- [x] Power output feeds HVAC; cooling output feeds power
+- [ ] Integration test: kill coolant → power overheats → HVAC degrades (the cascade)
 
 ---
 
-## Phase 2: Player Interaction
+## Phase 2: Connection Role Refactor & Tuning
 
-### 5. Virtual filesystem
+### 5. Role-based connections (Option A)
 **Difficulty: 2**
 
-Build an in-memory filesystem tree that represents game state as browsable paths. Subsystem status, sensor readings, and config files all live at paths like `/systems/power/status` and `/sensors/temp/reactor`. Support `ls` (list directory) and `cat` (read file) operations that return strings. Sensor value files should return live data from the simulation.
+Connections currently route inputs by `ComponentType`, which conflates physical quantity with routing role. Change to role-based routing so each connection declares what role it fills on the destination subsystem.
 
-- [ ] VFS tree structure (directories and files)
-- [ ] Populate VFS from world state each tick (or read live from state on access)
-- [ ] `ls(path)` → list of entries
-- [ ] `cat(path)` → file contents as string
-- [ ] Paths: `/systems/{name}/status`, `/systems/{name}/config.ax`, `/sensors/{category}/{name}`
-- [ ] Unit test: build VFS from world state, verify ls and cat return expected data
+- [ ] Add `destRole string` to `Connection` struct
+- [ ] Change `Subsystem.Tick()` signature: `map[ComponentType][]Component` → `map[string][]Component`
+- [ ] Update `updateSubsystems()` to key inputs by `conn.DestRole()`
+- [ ] Update Power tick: read `inputs["coolant-temp"]` and `inputs["coolant-flow"]`
+- [ ] Update HVAC tick: read `inputs["power-in"]` and `inputs["heat-in"]`
+- [ ] Update `WorldState.Init()` to pass role names when creating connections
 
 ---
 
-### 6. Editable config files
+### 6. Tuning profiles
 **Difficulty: 2**
 
-Each subsystem has a config file (`/systems/power/config.ax`, etc.) with key-value pairs the simulation reads each tick. The player can write to these files to change behavior (e.g., adjust pump speed, fuel burn rate, power output). The simulation picks up changes on the next tick. Simple `key = value` format is fine.
+Replace inline constants and ad-hoc formulas with named response profiles. Each profile describes how an input affects a component: gain (fraction of gap closed per tick), ceiling (max delta), floor (min drift).
 
-- [ ] Config file format: `key = value` (one per line, `#` comments)
-- [ ] Parser that reads config string into `map[string]float64`
-- [ ] Each subsystem reads its config values during tick (with defaults if missing)
-- [ ] `write(path, contents)` operation on the VFS
-- [ ] Test: change a config value → tick → verify subsystem behavior changed
+- [ ] `ThermalResponse` struct with `Gain`, `Ceiling`, `Floor` fields and `Delta(current, target)` method
+- [ ] Refactor Power tick to use profiles for coolant-temp and coolant-flow responses
+- [ ] Refactor HVAC tick to use profiles for heat-in and power-in responses
+- [ ] Remove `hvacHeatingRate` const, `calcHvacHeatDelta`, `calcPowerTempDelta`
+- [ ] All tuning knobs visible in one place per subsystem, not scattered in formulas
 
 ---
 
-### 7. Command parser
+## Phase 3: Player Interaction
+
+### 7. Virtual filesystem overhaul
 **Difficulty: 2**
 
-Accept a command string, parse it, execute it against the world state, return a result string. This is what the Godot terminal will call into. Start with the core commands from the design doc. Each command should return helpful, in-fiction output.
+The VFS exists but can't read/write content. Add the ability for file nodes to serve live data (virtual readers) or store editable content.
 
-- [ ] Parse command string into command + arguments
-- [ ] `status` — overview of all subsystems (name, health, status, key readings)
-- [ ] `inspect <system>` — detailed view of one subsystem (all sensors, config values, health)
-- [ ] `diagnose <component>` — identify specific faults (what's wrong and where to look)
-- [ ] `help` / `help <command>` — command list and usage
-- [ ] `ls <path>` / `cat <path>` — filesystem commands (delegate to VFS)
-- [ ] `set <component> <param> <value>` — modify a config value
-- [ ] `restart <component>` — attempt to restart an offline subsystem
-- [ ] Unknown command → helpful error message
-- [ ] Unit tests for each command
+- [ ] Add `content string`, `writable bool` to `Node`
+- [ ] `Read()` method: if `reader != nil` call it, else return `content`
+- [ ] `Write(content)` method: if `writable` set content, else error
+- [ ] `Cat(path)` method: resolve path and call `Read()`
+- [ ] Fix `Cd()` recursion bug
 
 ---
 
-### 8. Tab completion
+### 8. Config parser
+**Difficulty: 2**
+
+A minimal line-oriented config format that maps directly to simulation wiring. Three directives: `system` (declare subsystem), `set` (set component value), `connect` (wire a connection with role and throughput).
+
+```
+system power    type=power
+set power.effort       0.5
+connect cooling.flow-out -> power coolant-flow 1.0
+```
+
+- [ ] New `engine/config/` package
+- [ ] Parse `system`, `set`, `connect` directives from lines
+- [ ] Return `StationConfig` struct with declarations + collected errors (line number + message)
+- [ ] Unit test: parse valid config, parse config with errors
+
+---
+
+### 9. WorldState.ApplyConfig()
+**Difficulty: 2**
+
+Replace the hardcoded `Init()` body with config-driven setup. A factory creates subsystems by type name, then applies setpoints and wiring from the parsed config.
+
+- [ ] Subsystem factory: `type=power` → `NewPower()`, etc.
+- [ ] `nameIndex map[string]SubsystemID` for name-based lookup
+- [ ] Apply `set` directives to component values
+- [ ] Create ports and connections from `connect` directives
+- [ ] Return errors for the player to see via `diagnose`
+- [ ] Exported accessors: `Subsystems()`, `GetSubsystem(name)`
+- [ ] Test: apply config → tick → verify subsystem behavior matches config
+
+---
+
+### 10. VFS population & live readers
+**Difficulty: 2**
+
+Wire the VFS to WorldState so the filesystem reflects live game state.
+
+```
+/station/config.ax       # writable config file
+/systems/power/status    # virtual: live subsystem state
+/systems/power/components # virtual: component values
+/logs/system.log         # virtual: last N log lines
+```
+
+- [ ] Population function that builds the directory tree from WorldState
+- [ ] Virtual readers that close over subsystem references for live data
+- [ ] `/station/config.ax` initialized with starting config text (writable)
+- [ ] Log ring buffer in logging package for `/logs/system.log`
+
+---
+
+### 11. Command engine
+**Difficulty: 2**
+
+The primary gameplay interface. Player types commands to inspect, diagnose, and manipulate the station.
+
+- [ ] `CommandEngine` struct with `Execute(input string) string`
+- [ ] Dispatch via `map[string]handler`
+- [ ] `status` — table of all subsystems + component values + OK/WARN/CRIT
+- [ ] `inspect <system>` — detailed view with components, connections, input values
+- [ ] `diagnose <system>` — config errors, out-of-range values, hints
+- [ ] `ls [path]` / `cat <path>` — delegate to VFS
+- [ ] `write <path>` — multi-line input, write to VFS
+- [ ] `apply` — re-parse config from VFS, call ApplyConfig(), print errors
+- [ ] `set <sys>.<comp> <value>` — shortcut to modify and re-apply
+- [ ] `help [cmd]` — command list and usage
+
+---
+
+## Phase 4: Wire It Together
+
+### 12. Telemetry CSV export
 **Difficulty: 1**
 
-Given a partial input string, return a list of valid completions. Source completions from the command list, filesystem paths, subsystem names, and component IDs. Doesn't need to be fancy — prefix matching is fine.
+Write tick snapshots to a CSV file that Godot can read for rendering graphs. One row per component per tick. Flush after each tick so Godot can tail the file.
 
-- [ ] `GetCompletions(partial string) []string`
-- [ ] Complete command names when input has no space
-- [ ] Complete paths/subsystem names after a command
-- [ ] Test: partial input → expected completions
+- [ ] `TelemetryWriter` that opens/creates CSV on init
+- [ ] Header row: `tick,system,component,value`
+- [ ] Append rows after each `Update()`
+- [ ] Flush per tick
 
 ---
 
-## Phase 3: The Fun Part
-
-### 9. The fixable script (first puzzle)
+### 13. REPL + simulation goroutine
 **Difficulty: 2**
 
-The life support scrubber is offline because its startup script (`/systems/life-support/scrubber.ax`) has a bug — a bad sensor reference. The player must find the file, read it, spot the error, fix it via the VFS write operation, and the scrubber comes online on the next tick. This is the game's first "aha" moment.
+Refactor `main.go` from a blocking game loop to a concurrent design: simulation ticks in a background goroutine, player interacts via REPL on the main goroutine.
 
-- [ ] Scrubber startup script exists in VFS with an intentional bug (e.g., references `sensor.o2-main` instead of `sensors.o2-main`)
-- [ ] Simple script validator that checks sensor references against known valid paths
-- [ ] On tick: if script is valid → scrubber online, if invalid → scrubber stays offline with error in diagnose output
-- [ ] `diagnose atmo-scrubber` hints at the problem ("startup script error on line 3: unknown reference")
-- [ ] Test: fix the script → tick → scrubber comes online → CO2 starts dropping
+- [ ] Simulation goroutine ticking once per second
+- [ ] `sync.RWMutex` on WorldState (write-lock during tick, read-lock for commands)
+- [ ] REPL: `bufio.Scanner` on stdin → `Execute()` → print result
+- [ ] Boot message with station warning and `help` prompt
 
 ---
 
-### 10. Entropy engine
+## Phase 5: The Playable Scenario
+
+### 14. MVP scenario
 **Difficulty: 2**
 
-Random events that keep the station from ever being "solved." Components degrade at varying rates. Occasionally a config value gets corrupted, or a subsystem faults. Frequency should be tunable (a knob you can turn up for testing or down for a chill session). This is what makes the core loop repeat.
+A broken starting config that creates an obvious problem the player must diagnose and fix. The fix reveals a second emergent problem. Then the player adds a new subsystem via config.
 
-- [ ] Entropy source with configurable frequency (events per N ticks)
-- [ ] Event types: accelerated wear (health drop), config corruption (value changed), component fault (subsystem forced to degraded/critical)
-- [ ] Events logged so the player can discover what happened (`/logs/events.log` in VFS)
-- [ ] Test: run simulation with high entropy → verify events fire and state changes
+Starting config bug: HVAC `power-in` throughput is `0.0` — no power reaches HVAC, ambient temp rises. After fixing, power runs hot at effort `0.7`, creating a second problem the player solves by tuning effort or adding a second cooling unit.
 
----
-
-## Phase 4: Serialization & Integration
-
-### 11. State serialization
-**Difficulty: 1**
-
-Add JSON tags to all game state structs so the entire world state can be exported as JSON via `encoding/json`. This is what Godot will consume to render the dashboard and terminal.
-
-- [ ] JSON tags on `WorldState`, subsystem structs, sensor maps, status enum
-- [ ] `GetState() string` returns full JSON
-- [ ] `GetDashboard() string` returns summary JSON (just what the dashboard needs)
-- [ ] Verify JSON output is clean and parseable
+- [ ] Write the broken `config.ax` starting file
+- [ ] Boot message warns about rising temperature
+- [ ] `diagnose hvac` hints at the zero-throughput connection
+- [ ] After fix, verify HVAC temp converges toward target in telemetry
+- [ ] Power overheating emerges naturally from the physics
+- [ ] Adding `system cooling2 type=cooling` + connections works via `apply`
 
 ---
 
-### 12. CGO exports (deferred)
-**Difficulty: 2**
+### 15. Tuning & playtesting
+**Difficulty: 3**
 
-Wire up CGO `//export` functions so the engine can be built as a C shared library (`-buildmode=c-shared`) for Godot. Not a priority until the engine is playable standalone.
+Tune ThermalResponse profiles until the scenario feels right. The broken state should be obviously wrong. Recovery should be visible within ~10 ticks. Power overheating should be a gradual pressure, not instant.
 
-- [ ] `axiom_init()` — create and return an engine instance
-- [ ] `axiom_tick(engine)` — advance one tick
-- [ ] `axiom_execute_command(engine, cmd)` — run a command, return result as C string
-- [ ] `axiom_get_state(engine)` — return world state as JSON
-- [ ] `axiom_get_completions(engine, partial)` — return completions as JSON
-- [ ] `axiom_free_string(ptr)` — free a Go-allocated C string
-- [ ] `axiom_save_file(engine, path, contents)` — write to VFS
-- [ ] Smoke test: init → tick 10 times → get_state → verify JSON parses
+- [ ] Profile values that produce satisfying convergence curves
+- [ ] Verify the cascade: broken HVAC → rising temp is legible from `status`
+- [ ] Verify the fix: `apply` → `status` shows improvement within a few ticks
+- [ ] Verify expansion: adding a subsystem via config works without restart
+- [ ] Full end-to-end walkthrough of the player flow
 
 ---
 
 ## Done Checklist
 
-When all 12 items are complete, you should be able to:
+When complete, you should be able to:
 
-- [ ] Init an engine, tick it, and watch subsystems degrade over time
-- [ ] Send commands and get back meaningful text responses
-- [ ] Browse the virtual filesystem and read live sensor data
-- [ ] Edit a config file and see the simulation respond next tick
-- [ ] Fix the scrubber script and watch life support recover
-- [ ] Watch cascading failures when you neglect a system
-- [ ] See random entropy events create new problems
-- [ ] Get all of the above through CGO calls returning JSON
-
-That's your Go MVP. Godot just needs to render what this engine computes.
+- [ ] Boot the engine and see a terminal with a station warning
+- [ ] Run `status` and `diagnose` to find the problem
+- [ ] Read and edit the config via `cat` and `write`
+- [ ] Run `apply` and watch the simulation respond
+- [ ] Add a new subsystem by editing the config
+- [ ] See tick-by-tick telemetry in a CSV file for Godot to render
+- [ ] Feel the core loop: diagnose → fix → monitor → new problem emerges

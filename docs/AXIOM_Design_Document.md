@@ -3,8 +3,8 @@
 ## A Terminal-Based Station Management & Programming Game
 
 **Genre:** Programming / Simulation / Survival / MMO
-**Platform:** Terminal (TUI)
-**Engine:** Rust + ratatui
+**Platform:** Terminal (TUI) → Godot dashboard
+**Engine:** Go (simulation) + Godot (frontend)
 **Multiplayer:** Single-player → Persistent MMO transition
 
 ---
@@ -679,107 +679,139 @@ Events create pressure and story without interrupting gameplay. They appear in t
 **Frontend (Godot / C#):**
 - **Engine:** Godot 4 with C#
 - **Role:** All rendering, UI, audio, input handling, visual effects
-- **Includes:** Dashboard rendering, retro CRT aesthetic, in-game terminal emulator, text editor, visual effects (scan lines, flicker, glow), sound design, Steam integration
-- **Distribution:** Native executables via Godot export (Windows, Linux, Mac), Steam-ready
+- **Includes:** Dashboard rendering (including telemetry graphs), retro CRT aesthetic, in-game terminal emulator, text editor, visual effects (scan lines, flicker, glow), sound design, Steam integration
+- **Distribution:** Native executables via Godot export (Windows, Linux, Mac)
 
-**Backend Engine (Rust):**
-- **Role:** Simulation engine, AXIOM Script interpreter, game logic, networking
-- **Integration:** Compiled as a native shared library (`.dll` / `.so` / `.dylib`), called from C# via P/Invoke or GDExtension
-- **Includes:** Tick-based simulation loop, subsystem models, dependency graph, cascade engine, event/threat system, script parser and sandboxed interpreter, virtual filesystem logic
-- **Scripting Engine:** Custom AXIOM Script interpreter (or embedded Lua via `rlua` as a backend with AXIOM syntax as a frontend)
+**Backend Engine (Go):**
+- **Role:** Simulation engine, config parser, command engine, game logic
+- **Integration:** Compiled as a C shared library via CGO (`go build -buildmode=c-shared`), called from C# via P/Invoke or GDExtension
+- **Includes:** Tick-based simulation loop, subsystem models, dependency graph, cascade engine, event/threat system, config parser, virtual filesystem logic, command parser and execution
+- **Scripting Engine:** Custom tree-walk interpreter for AXIOM config language. For trigger/automation scripting, either custom or embedded Lua via `gopher-lua` — TBD based on complexity needs.
 
-**Server (Part 2 — Rust):**
-- **Runtime:** Tokio async runtime
-- **Protocol:** WebSocket or custom TCP protocol for station-to-station communication
+**Server (Part 2 — Go):**
+- **Protocol:** WebSocket or custom TCP for station-to-station communication
 - **Persistence:** SQLite per station for state, shared database for network/constellation state
 - **Hosting:** Dedicated server binary, horizontally scalable via regional sharding
 
 ### 12.2 Architecture Split: What Lives Where
 
-**Rust (the brain)** owns all game logic. It is the single source of truth for simulation state. Godot never modifies game state directly — it sends commands to Rust and receives state updates back.
+**Go (the brain)** owns all game logic. It is the single source of truth for simulation state. Godot never modifies game state directly — it sends commands to Go and receives state updates back.
 
 - Simulation tick loop and world clock
-- All subsystem models, health, sensors, dependencies
+- All subsystem models, sensors, dependencies
 - Dependency graph and cascade propagation
-- AXIOM Script parsing, validation, and sandboxed execution
+- Config parsing and application (declarative .ax files)
+- Command parsing, validation, and execution
 - Virtual filesystem (game state as files/directories)
+- Telemetry export (CSV) for Godot graph rendering
 - Event and threat engine (precondition evaluation, event firing)
 - Procedural problem generation (wear, corruption, emergent bugs)
-- Command parsing and validation
 - Network protocol and inter-station communication (Part 2)
 - Server-side simulation for offline persistence (Part 2)
 
-**Godot/C# (the face)** owns all presentation and player interaction. It renders the world Rust computes.
+**Godot/C# (the face)** owns all presentation and player interaction. It renders the world Go computes.
 
 - AXIOM OS visual shell — retro CRT monitor aesthetic, scan lines, phosphor glow, screen flicker
 - Dashboard rendering — dynamic panel layout, color-coded status indicators, drill-down views
-- In-game text editor with AXIOM Script syntax highlighting
+- Telemetry graphs — reads CSV telemetry from the Go engine, renders time-series graphs of subsystem values
+- In-game text editor with AXIOM config syntax highlighting
 - Terminal emulator with tab completion UI, command history, scrollback
 - Sound design — ambient hums, alert klaxons, keyboard clatter, system boot sequences
 - Visual effects — power fluctuations dimming the screen, alerts flashing, panels lighting up as systems come online
 - Station environment — if you want a visual representation of the bunker beyond just terminals
 - Network map visualization (Part 2)
 - Steam integration, achievements, settings, save management
-- Input handling and routing commands to Rust
+- Input handling and routing commands to Go
 
 ### 12.3 The FFI Boundary
 
-Rust compiles to a C-compatible shared library. C# calls into it via P/Invoke (or optionally via GDExtension for tighter Godot integration).
+Go compiles to a C-compatible shared library via CGO. C# calls into it via P/Invoke (or optionally via GDExtension for tighter Godot integration).
 
 The API boundary is clean and narrow:
 
 ```
-// Rust exposes these to Godot:
+// Go exposes these to Godot via CGO:
 axiom_init()                          → Initialize simulation
 axiom_tick()                          → Advance one simulation tick
-axiom_get_state()                     → Get full world state as serialized data
-axiom_get_subsystem(id)               → Get detailed subsystem state
+axiom_get_state()                     → Full world state as JSON
+axiom_get_subsystem(id)               → Detailed subsystem state
 axiom_execute_command(cmd_string)      → Player typed a command
-axiom_save_script(path, contents)      → Player saved a script file
+axiom_save_file(path, contents)        → Player saved a config file
 axiom_get_filesystem(path)             → List directory or read file
 axiom_get_completions(partial)         → Tab completion suggestions
 axiom_get_dashboard()                  → Dashboard panel data
 axiom_get_events()                     → Recent events/alerts since last poll
 ```
 
-Data crosses the boundary as JSON or a compact binary format (MessagePack, FlatBuffers). Godot deserializes it into C# objects for rendering.
+Data crosses the boundary as JSON. Godot deserializes it into C# objects for rendering. Telemetry data is written to CSV files that Godot tails for graph rendering.
 
 This separation means:
-- Rust can be developed and tested independently (unit tests, headless simulation runs)
-- Godot can be developed with mock data while Rust features are in progress
-- The Rust engine could power a standalone TUI client (ratatui) as an alternative frontend later
-- The Rust server for Part 2 shares the exact same simulation code as the client
+- Go can be developed and tested independently (unit tests, headless simulation, terminal REPL)
+- Godot can be developed with mock data while Go features are in progress
+- The Go engine powers a standalone terminal REPL for MVP playtesting without Godot
+- The Go server for Part 2 shares the exact same simulation code as the client
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    Godot / C# (Frontend)                  │
 │  ┌────────────┐ ┌───────────┐ ┌────────────────────────┐ │
 │  │ Dashboard   │ │ Terminal  │ │  Editor / Effects /    │ │
-│  │ Renderer    │ │ Emulator  │ │  Audio / Environment   │ │
+│  │ + Graphs    │ │ Emulator  │ │  Audio / Environment   │ │
 │  └─────┬──────┘ └─────┬─────┘ └──────────┬─────────────┘ │
 │        │              │                   │               │
 │  ══════╪══════════════╪═══════════════════╪═══════════    │
-│        │         FFI Boundary (P/Invoke)  │               │
+│        │    FFI Boundary (CGO / P/Invoke) │               │
 │  ══════╪══════════════╪═══════════════════╪═══════════    │
 │        │              │                   │               │
 │  ┌─────▼──────────────▼───────────────────▼─────────────┐ │
-│  │              Rust Engine (Shared Library)              │ │
+│  │               Go Engine (Shared Library)               │ │
 │  │  ┌──────────┐ ┌───────────┐ ┌──────────────────────┐ │ │
-│  │  │Simulation│ │  AXIOM    │ │  Virtual Filesystem   │ │ │
-│  │  │  Engine  │ │  Script   │ │  & Command Parser     │ │ │
-│  │  │          │ │Interpreter│ │                       │ │ │
+│  │  │Simulation│ │  Config   │ │  Virtual Filesystem   │ │ │
+│  │  │  Engine  │ │  Parser   │ │  & Command Engine     │ │ │
+│  │  │          │ │           │ │                       │ │ │
 │  │  └──────────┘ └───────────┘ └──────────────────────┘ │ │
 │  │  ┌──────────┐ ┌───────────┐ ┌──────────────────────┐ │ │
-│  │  │Dependency│ │  Event /  │ │  Network Layer       │ │ │
-│  │  │  Graph   │ │  Threat   │ │  (Part 2)            │ │ │
+│  │  │Dependency│ │  Event /  │ │  Telemetry Export     │ │ │
+│  │  │  Graph   │ │  Threat   │ │  (CSV for Godot)      │ │ │
 │  │  └──────────┘ └───────────┘ └──────────────────────┘ │ │
 │  └──────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 12.4 AXIOM Script Execution
+### 12.4 Two Layers of Player Input
 
-Scripts run in a sandboxed interpreter with:
+**Commands** are the primary gameplay interface. The player types commands in the terminal to inspect, diagnose, and manipulate the station in real time. Commands are imperative — they do something now.
+
+Core commands: `status`, `inspect`, `diagnose`, `help`, `ls`, `cat`, `write`, `apply`, `set`
+
+**Config files** are the deeper interaction layer. When a command reveals a problem ("pump speed set to 40%"), the player navigates the virtual filesystem, opens the relevant `.ax` file, and edits it. Config files are declarative — they describe how systems should be wired and what their setpoints are.
+
+The config language handles:
+- Subsystem declarations (`system`)
+- Connection topology (`connect` with named roles and throughput)
+- Setpoints and thresholds (`set` component values)
+
+The player edits config files via the VFS (`write`), then runs `apply` to re-parse and apply the config to the live simulation. Errors are surfaced through `diagnose`.
+
+The command engine is higher priority than the config parser. Commands enable all gameplay; config editing enables the "fix the broken config" subset.
+
+### 12.5 Simulation Tuning
+
+Subsystem behavior is governed by tuning profiles rather than inline constants. Each subsystem defines its response characteristics as data:
+
+- **Gain** — fraction of the gap between current and target value closed per tick
+- **Ceiling** — maximum absolute delta per tick (prevents runaway)
+- **Floor** — minimum drift per tick (prevents stalling)
+
+Profiles are defined per input role on each subsystem. The tick body becomes: for each input role, look up the profile, compute `profile.Delta(current, input)`, accumulate deltas. This makes every subsystem's physics consistent and tunable without rewriting formulas.
+
+Loop stability is verifiable by inspection: if the product of gains around any feedback loop is less than 1.0, the system converges. If greater than 1.0, it diverges. This replaces ad-hoc balancing with a predictable framework.
+
+Telemetry is exported to CSV each tick (`tick,system,component,value`) for Godot to render as time-series graphs and for the developer to plot during tuning.
+
+### 12.6 AXIOM Script Execution (Future)
+
+Beyond config files, the full AXIOM Script language (triggers, macros, test scripts) will run in a sandboxed interpreter with:
 
 - **Resource limits** — max ticks per execution, max memory, max concurrent scripts
 - **Permissions** — scripts can only access systems they're authorized for. Network scripts need explicit network permissions.
@@ -807,38 +839,50 @@ Scale considerations:
 
 ## 13. Development Roadmap
 
-### Milestone 1 — The Heartbeat
-**Goal:** A ticking simulation with basic systems, viewable in Godot.
+### Milestone 1 — The Heartbeat (Done)
+**Goal:** A ticking simulation with basic systems.
 
-- Set up Rust library project with C FFI exports
-- Set up Godot project with C# and P/Invoke bindings to Rust
-- Implement tick-based simulation loop in Rust with 2-3 subsystems (power, coolant, life support)
-- Build basic Godot dashboard scene — panels showing live values from the Rust engine
-- Prove the loop: Rust ticks → state changes → Godot renders updated dashboard
-- Systems degrade over time — the world is alive
+- ~~Set up Go module with package structure~~
+- ~~Implement tick-based simulation loop with 3 subsystems (power, coolant, HVAC)~~
+- ~~Connection system with ports, throughput, and DFS dependency resolution~~
+- ~~Logging system with structured output~~
+- Systems interact through a dependency graph — the world is alive
 
 ### Milestone 2 — The Hands
-**Goal:** Player can interact with the simulation through an in-game AXIOM OS terminal.
+**Goal:** Player can interact with the simulation through a terminal REPL and config files.
 
+- Role-based connection routing (connections declare destination role, not just component type)
+- Tuning profiles replace inline constants (gain/ceiling/floor per input role)
+- Config parser: `system`, `set`, `connect` directives from .ax files
+- WorldState.ApplyConfig() replaces hardcoded Init()
+- VFS wired to live game state (virtual readers for status, writable config files)
+- Command engine: `status`, `inspect`, `diagnose`, `ls`, `cat`, `write`, `apply`, `set`, `help`
+- REPL on main goroutine, simulation ticking in background goroutine
+- Telemetry CSV export for Godot graph rendering
+- MVP scenario: broken config → diagnose → fix → monitor recovery → add subsystem
+- Prove the core loop is fun before building more
+
+### Milestone 3 — The Dashboard
+**Goal:** Godot renders the simulation state as a visual dashboard with telemetry graphs.
+
+- Set up Godot project with C# and P/Invoke bindings to Go CGO shared library
+- Build basic dashboard scene — panels showing live values from the Go engine
+- Telemetry graph rendering from CSV data
 - Build terminal emulator UI in Godot (retro CRT aesthetic, text input, scrollback)
-- Implement command parser in Rust with tab completion
-- Build virtual filesystem in Rust representing game state
-- Core commands: `ls`, `cat`, `cd`, `status`, `inspect`, `help`, `info`
-- Basic repair commands: `set`, `open`, `close`, `restart`
-- Godot sends command strings to Rust, renders results — prove the player can affect the simulation
+- Godot sends command strings to Go, renders results
+- In-game text editor for config files with syntax highlighting
 
-### Milestone 3 — The Brain
+### Milestone 4 — The Brain
 **Goal:** AXIOM Script interpreter running player-written automation.
 
-- Implement script parser and interpreter in Rust for core language features
-- Build in-game text editor in Godot with AXIOM syntax highlighting
-- Trigger evaluation on each tick in Rust
+- Implement script parser and interpreter in Go for triggers and macros
+- Trigger evaluation on each tick
 - Script management: `deploy`, `undeploy`, `list-scripts`, `script-status`
 - Hot reload on file save
-- Error handling and sandboxing in Rust, error display in Godot
+- Error handling and sandboxing in Go, error display in Godot
 - First real gameplay loop: system breaks → player writes fix → script handles it next time
 
-### Milestone 4 — Cascades & Chaos
+### Milestone 5 — Cascades & Chaos
 **Goal:** Dependency graph creates emergent, cascading failures.
 
 - Full dependency graph implementation
@@ -846,47 +890,47 @@ Scale considerations:
 - Complex multi-system failure scenarios emerge naturally
 - Player must triage and prioritize — the core tension loop
 
-### Milestone 5 — Growth
+### Milestone 6 — Growth
 **Goal:** Player can expand their station and watch it grow.
 
 - Sealed sections that can be explored and activated
 - Fabrication system for building components
 - New subsystem types unlocked through expansion
-- Dashboard dynamically grows with the station — Godot adds panels as Rust reports new subsystems
+- Dashboard dynamically grows with the station — Godot adds panels as Go reports new subsystems
 - Test scripts and health checks as first-class features
 - Visual and audio polish: boot sequences, alert sounds, ambient hums, CRT effects
 
-### Milestone 6 — Narrative
+### Milestone 7 — Narrative
 **Goal:** The world tells a story through its infrastructure.
 
 - Archive system with discoverable lore fragments
-- Event engine in Rust with precondition-based triggers
-- Surface access: camera feeds rendered in Godot, sensor data from Rust
+- Event engine in Go with precondition-based triggers
+- Surface access: camera feeds rendered in Godot, sensor data from Go
 - Mystery elements seeded throughout the station
 - Threat events: environmental, mechanical, and ambiguous
 - Environmental art and atmosphere in Godot (station visuals, lighting, mood)
 
-### Milestone 7 — The Uplink
+### Milestone 8 — The Uplink
 **Goal:** Satellite system and the transition to multiplayer.
 
 - Satellite uplink facility as a late-game engineering challenge
-- Orbital mechanics simulation in Rust (simplified)
+- Orbital mechanics simulation in Go (simplified)
 - Signal processing and antenna management
 - Godot renders satellite tracking interface, signal visualizations
 - First contact: detecting another station's signal
 - Steam store page, Godot export pipeline, packaging and distribution
 
-### Milestone 8 — The Network
+### Milestone 9 — The Network
 **Goal:** Persistent multiplayer world.
 
-- Rust server binary running persistent station instances (shares simulation code with client)
+- Go server binary running persistent station instances (shares simulation code with client)
 - Inter-station communication protocol
-- Offline automation (Rust server ticks stations while players are away)
+- Offline automation (Go server ticks stations while players are away)
 - Shared systems namespace and network AXIOM extensions
 - Basic resource trading between stations
 - Network map visualization in Godot
 
-### Milestone 9 — Civilization
+### Milestone 10 — Civilization
 **Goal:** Full-scale emergent multiplayer dynamics.
 
 - Satellite constellation as shared infrastructure
@@ -945,14 +989,16 @@ In multiplayer, the sandbox becomes social. Visit another player's station and s
 
 ## 16. Open Questions
 
-- **AXIOM Script implementation:** Custom interpreter from scratch in Rust (more control, bigger undertaking) vs. Lua backend with AXIOM syntax layer (faster to prototype, proven sandboxing)?
-- **FFI strategy:** P/Invoke from C# (simplest, works today) vs. GDExtension bindings (tighter integration, more complex setup)? Start with P/Invoke and migrate if needed.
-- **Data serialization across FFI boundary:** JSON (simple, debuggable, slower) vs. MessagePack/FlatBuffers (faster, harder to debug)? JSON for development, optimize later if profiling demands it.
-- **Tick rate tuning:** 1/second feels right for tension, but may need adjustment for offline simulation performance at scale.
+- **AXIOM Script implementation:** Custom tree-walk interpreter in Go (full control, fits the constrained language) vs. embedded Lua via `gopher-lua` (faster to prototype triggers/automation, proven sandboxing)? Config parsing is simple either way — the question is whether trigger/automation scripting justifies Lua.
+- **FFI strategy:** P/Invoke from C# via CGO shared library (simplest) vs. GDExtension (tighter integration). Start with P/Invoke.
+- **Data serialization across FFI:** JSON for development. Optimize later if profiling demands it.
+- **Command parser vs config parser priority:** Commands first — they enable all gameplay. Config parser enables the "edit the broken file" puzzle type.
+- **Tick rate tuning:** 1/second feels right for tension, but may need adjustment for offline simulation at scale.
+- **Subsystem tuning methodology:** Telemetry CSV export + plotting for feedback behavior. Data-driven tuning profiles to replace inline constants. Loop gain product < 1.0 for stability.
 - **Satellite mechanics depth:** How realistic should orbital mechanics be? Simplified model vs. actual Keplerian elements?
 - **Anti-cheat in Part 2:** Server-side script validation is essential, but how much can be trusted to the client?
-- **Onboarding:** How to teach AXIOM Script naturally without a tutorial? The first broken system is the tutorial, but pacing matters.
-- **Visual scope in Godot:** Is the game purely terminal/dashboard screens, or does the player also see a visual representation of their station (isometric bunker view, station map)? Starting terminal-only is safer; visual environments can be added later.
+- **Onboarding:** The first broken config IS the tutorial. Pacing matters — the first fix should be obvious, the second should require investigation.
+- **Visual scope in Godot:** Is the game purely terminal/dashboard screens, or does the player also see a visual representation of their station? Starting terminal-only is safer; visual environments can be added later.
 - **Scope management:** Part 1 is a complete game. Part 2 is ambitious. The roadmap should ensure Part 1 ships and is satisfying on its own before Part 2 development begins.
 
 ---
@@ -963,46 +1009,49 @@ Before building the full game, build the smallest thing that answers: **is the c
 
 ### What the Prototype Needs
 
-**Rust Engine (library):**
+**Go Engine (terminal REPL, no Godot yet):**
 
-- [ ] Project setup: Rust library with `cdylib` target, C FFI exports, JSON serialization for state
-- [ ] World clock: tick loop that advances simulation state, exposable to Godot via `axiom_tick()`
-- [ ] Subsystem model: a generic subsystem struct with health (0-100), status (online/degraded/critical/offline), sensor values (key-value pairs), and a degradation rate
-- [ ] Three subsystems wired up: **Power** (generates energy, consumes fuel, has output level), **Coolant** (manages temperature, has pump speed and flow rate), **Life Support** (manages O2/CO2 levels, depends on power)
-- [ ] Dependency graph: power feeds life support and coolant. Coolant keeps power from overheating. If power drops, life support output drops. If coolant fails, power temp rises and eventually trips safety shutdown
-- [ ] Virtual filesystem: represent subsystem state as browsable paths (`/systems/power/status`, `/sensors/temp/reactor`, etc.). Support `ls` and `cat` operations that return strings
-- [ ] Command parser: accept string commands, return string results. Core commands: `status`, `inspect <system>`, `diagnose <component>`, `help`, `ls <path>`, `cat <path>`, `set <component> <param> <value>`, `restart <component>`
-- [ ] Tab completion: given a partial string, return a list of valid completions from the filesystem and command list
-- [ ] One editable config file per subsystem: a simple key-value format that the simulation reads each tick. Player can change values (thresholds, setpoints, speeds) and the simulation responds
-- [ ] One fixable script: the life support scrubber has a startup script with a bug (bad sensor reference). Player must find and fix it via the virtual filesystem. Fixing it brings the scrubber online
-- [ ] Entropy: random events that degrade components, corrupt a config value, or knock a subsystem into a fault state. Frequency tunable for testing
-- [ ] State export: `axiom_get_state()` returns full world state as JSON for Godot to render
+- [x] Project setup: Go module with package structure, tick loop, logging
+- [x] Three subsystems wired up: **Power** (generates energy, produces heat), **Coolant** (manages temperature via flow), **HVAC** (regulates ambient temperature)
+- [x] Dependency graph: coolant feeds power (cooling), power feeds HVAC (power + heat)
+- [ ] Role-based connections: connections declare destination role, not just component type
+- [ ] Tuning profiles: gain/ceiling/floor per input role, replacing inline constants
+- [ ] Config parser: `system`, `set`, `connect` directives from .ax files
+- [ ] WorldState.ApplyConfig() replacing hardcoded Init()
+- [ ] Virtual filesystem wired to live game state (virtual readers for status, writable config files)
+- [ ] Command engine: `status`, `inspect`, `diagnose`, `ls`, `cat`, `write`, `apply`, `set`, `help`
+- [ ] REPL: simulation goroutine + stdin command loop
+- [ ] Telemetry CSV export: tick-by-tick component values for Godot graph rendering
+- [ ] Broken starting config that creates an obvious problem to diagnose and fix
 
-**Godot Frontend (C#):**
+**Godot Frontend (after core loop is validated):**
 
-- [ ] Project setup: Godot 4 C# project, P/Invoke bindings to Rust shared library, call `axiom_tick()` on a timer
-- [ ] Dashboard scene: 3 panels (power, coolant, life support) showing key values from Rust state. Color coded: green (>70 health), yellow (30-70), red (<30), dark (offline)
-- [ ] Terminal scene: text input field, scrollback output area, command history (up arrow). Send commands to Rust, display results. Monospace font, dark background
-- [ ] Tab completion: on Tab keypress, query Rust for completions and display/cycle through them
-- [ ] In-game file editor: open a file from the virtual filesystem in a basic text editing view. Save sends contents back to Rust. Minimal — just needs to work, not be pretty
-- [ ] Boot sequence: on game start, play the AXIOM OS boot text (can be hardcoded for prototype), then drop into the terminal with the first crisis already happening
-- [ ] Alert system: when a subsystem goes critical, flash an alert in the terminal output and make the dashboard panel blink or pulse
-- [ ] CRT shader (optional but motivating): scanline overlay, slight curvature, phosphor glow. Makes it feel real from day one
+- [ ] Project setup: Godot 4 C# project, P/Invoke bindings to Go CGO shared library
+- [ ] Dashboard scene: panels showing live values from Go state, color coded
+- [ ] Telemetry graphs: render time-series from CSV data
+- [ ] Terminal scene: text input, scrollback, command history. Send commands to Go, display results
+- [ ] In-game file editor for config files
+- [ ] Boot sequence and alert system
+- [ ] CRT shader (optional but motivating)
 
 **The First Playable Scenario:**
 
-- [ ] Player boots into a station with failing life support (scrubber offline due to script bug), degrading power (fuel running low), and coolant slowly losing pressure
-- [ ] The terminal guides them: `status` → see the problems → `inspect life-support` → find the scrubber fault → `diagnose atmo-scrubber` → see the bug location → open and fix the script → scrubber comes online → CO2 stabilizes
-- [ ] Meanwhile, power is slowly degrading. Player needs to `inspect power` and adjust the fuel consumption rate in the power config to stretch reserves
-- [ ] Coolant pressure is dropping. Player investigates, finds a pump speed value that got corrupted, fixes it in the config
-- [ ] After all three are stabilized: random entropy events start breaking things again. The loop continues. Is it fun to keep this station alive?
+- [ ] Player boots into a station where HVAC is non-functional (power-in connection throughput is 0.0)
+- [ ] `status` shows HVAC critical, ambient temp rising
+- [ ] `diagnose hvac` reveals: "power-in throughput is 0.0 — system receives no power"
+- [ ] Player reads config via `cat /station/config.ax`, spots the zero throughput
+- [ ] Player fixes it via `write` + `apply`, watches HVAC temp converge toward target
+- [ ] Power is running hot at effort 0.7 — a second problem emerges naturally from the physics
+- [ ] Player adds a second cooling unit via config (`system cooling2 type=cooling` + connections)
+- [ ] The loop: diagnose → fix config → monitor recovery → new problem emerges
 
 ### Success Criteria
 
 The prototype is successful if:
 
 - [ ] A playtester can figure out what to do without external instructions
-- [ ] Fixing a problem and watching the dashboard recover feels satisfying
+- [ ] Fixing a problem and watching values recover feels satisfying
 - [ ] The player feels a sense of urgency when multiple things go wrong at once
 - [ ] The player wants to keep playing after the first crisis is resolved
-- [ ] Editing configs and fixing scripts feels like "real" engineering, not busywork
+- [ ] Editing configs feels like "real" engineering, not busywork
+- [ ] Adding a new subsystem via config and watching it take effect feels powerful

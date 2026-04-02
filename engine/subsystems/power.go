@@ -5,8 +5,14 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
+type powerTickState struct {
+	coolantFlow utils.Norm
+	coolantTemp utils.Norm
+}
+
 type Power struct {
 	*subsystemCore
+	state powerTickState
 }
 
 func NewPower(initPower utils.Norm) *Power {
@@ -16,27 +22,29 @@ func NewPower(initPower utils.Norm) *Power {
 
 	power.AddComponent("power", components.Power, initPower)
 	power.AddComponent("temp", components.Temperature, 0)
+
+	power.onInput("coolant-temp", func(comp components.Component) {
+		power.state.coolantTemp += comp.Value()
+	})
+
+	power.onInput("coolant-flow", func(comp components.Component) {
+		power.state.coolantFlow += comp.Value()
+	})
+
 	return power
 }
 
 func (s *Power) Effort() utils.Norm { return s.components["power"].Value() }
 
-func (s *Power) Tick(inputs map[components.ComponentType][]components.Component) {
-	coolantTemp := utils.Norm(0.0)
-	if temps, ok := inputs[components.Temperature]; ok {
-		for _, t := range temps {
-			coolantTemp += t.Value()
-		}
-	}
+func (s *Power) Tick(inputs map[string]components.Component) {
+	s.dispatchInputs(inputs)
 
-	coolantFlow := utils.Norm(0.0)
-	if flows, ok := inputs[components.Flow]; ok {
-		for _, f := range flows {
-			coolantFlow += f.Value()
-		}
-	}
-
-	delta := calcPowerTempDelta(s.components["temp"].Value(), coolantTemp, coolantFlow, s.components["power"].Value())
+	delta := calcPowerTempDelta(
+		s.components["temp"].Value(),
+		s.state.coolantTemp,
+		s.state.coolantFlow,
+		s.components["power"].Value(),
+	)
 
 	s.components["temp"].AddValue(delta)
 }

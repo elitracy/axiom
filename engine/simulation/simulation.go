@@ -112,11 +112,11 @@ func (ws *WorldState) updateSubsystems() {
 			}
 		}
 
-		inputs := make(map[components.ComponentType][]components.Component, 0)
+		inputs := make(map[string]components.Component, 0)
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
 			srcComp.SetValue(srcComp.Value() * conn.Throughput())
-			inputs[srcComp.Type()] = append(inputs[srcComp.Type()], srcComp)
+			inputs[srcComp.Name()] = srcComp
 		}
 		system.Tick(inputs)
 

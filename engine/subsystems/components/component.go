@@ -26,10 +26,10 @@ type Component struct {
 	id            ComponentID
 	name          string
 	componentType ComponentType
-	value         utils.Norm
+	value         utils.Unit
 }
 
-func NewComponent(name string, componentType ComponentType, value utils.Norm) *Component {
+func NewComponent(name string, componentType ComponentType, value utils.Unit) *Component {
 	return &Component{
 		id:            newComponentID(),
 		name:          name,
@@ -41,10 +41,10 @@ func NewComponent(name string, componentType ComponentType, value utils.Norm) *C
 func (c Component) ID() ComponentID                       { return c.id }
 func (c Component) Type() ComponentType                   { return c.componentType }
 func (c Component) Name() string                          { return c.name }
-func (c Component) Value() utils.Norm                     { return c.value }
-func (c *Component) SetValue(value utils.Norm) *Component { c.value = value.Clamp(); return c }
+func (c Component) Value() utils.Unit                     { return c.value }
+func (c *Component) SetValue(value utils.Unit) *Component { c.value = value.Clamp(); return c }
 
-func (c *Component) AddValue(value utils.Norm) *Component {
+func (c *Component) AddValue(value utils.Unit) *Component {
 	c.value += value
 	c.value = c.value.Clamp()
 

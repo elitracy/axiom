@@ -6,8 +6,8 @@ import (
 )
 
 type powerTickState struct {
-	coolantFlow utils.Norm
-	coolantTemp utils.Norm
+	coolantFlow utils.Unit
+	coolantTemp utils.Unit
 }
 
 type Power struct {
@@ -15,7 +15,7 @@ type Power struct {
 	state powerTickState
 }
 
-func NewPower(initPower utils.Norm) *Power {
+func NewPower(initPower utils.Unit) *Power {
 	power := &Power{
 		subsystemCore: newSubsystemCore("Power"),
 	}
@@ -23,20 +23,13 @@ func NewPower(initPower utils.Norm) *Power {
 	power.AddComponent("power", components.Power, initPower)
 	power.AddComponent("temp", components.Temperature, 0)
 
-	power.onInput("temp-out", func(comp components.Component) {
-		power.state.coolantTemp = comp.Value()
-		power.state.coolantTemp = power.state.coolantTemp.Clamp()
-	})
-
-	power.onInput("flow-out", func(comp components.Component) {
-		power.state.coolantFlow = comp.Value()
-		power.state.coolantFlow = power.state.coolantTemp.Clamp()
-	})
+	power.onInput("cooling", func(comp components.Component) { power.state.coolantTemp = comp.Value() })
+	power.onInput("cooling-rate", func(comp components.Component) { power.state.coolantFlow = comp.Value() })
 
 	return power
 }
 
-func (s *Power) Effort() utils.Norm { return s.components["power"].Value() }
+func (s *Power) Effort() utils.Unit { return s.components["power"].Value() }
 
 func (s *Power) Tick(inputs map[string]components.Component) {
 	s.dispatchInputs(inputs)
@@ -51,7 +44,7 @@ func (s *Power) Tick(inputs map[string]components.Component) {
 	s.components["temp"].AddValue(delta)
 }
 
-func calcPowerTempDelta(currentTemp, coolantTemp, coolingRate, heatRate utils.Norm) utils.Norm {
+func calcPowerTempDelta(currentTemp, coolantTemp, coolingRate, heatRate utils.Unit) utils.Unit {
 	cooling := (currentTemp + coolantTemp) * -coolingRate
 
 	return min(heatRate+cooling, heatRate)

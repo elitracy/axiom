@@ -1,16 +1,15 @@
 package materials
 
-
 type Fluid struct {
 	Name string // the name of the fluid
 
 	MinTemperature   float64               // the minimum temperature of the fluid (C)
 	MaxTemperature   float64               // the minimum temperature of the fluid (C)
-	TemperatureCurve func(float64) float64 // the curve to calculate the applied temperature from the normalized value
+	TemperatureCurve func(float64) float64 // the curve to calculate the applied temperature from the unit value
 
 	MinViscosity   float64               // the minimum viscosity of the fluid (lower = less flow) (cP)
 	MaxViscosity   float64               // the maximum viscosity of the fluid (higher = more flow) (cP)
-	ViscosityCurve func(float64) float64 // the curve to calculate the applied viscosity from the normalized value
+	ViscosityCurve func(float64) float64 // the curve to calculate the applied viscosity from the unit value
 
 	HeatAbsorptionRate   float64 // how much heat is absorbed by the fluid (C/tick)
 	MaxTemperatureDelta  float64 // the maximum temperature delta (C/tick)

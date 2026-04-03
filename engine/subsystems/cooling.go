@@ -9,17 +9,17 @@ type Cooling struct {
 	*subsystemCore
 }
 
-func NewCooling(initEffort utils.Norm) *Cooling {
+func NewCooling(initEffort utils.Unit) *Cooling {
 	cooling := &Cooling{
 		subsystemCore: newSubsystemCore("Cooling"),
 	}
 
-	cooling.AddComponent("flow-out", components.Flow, initEffort)
-	cooling.AddComponent("temp-out", components.Temperature, 0.5)
+	cooling.AddComponent("flow", components.Flow, initEffort)
+	cooling.AddComponent("temp", components.Temperature, 0.5)
 
 	return cooling
 }
 
-func (s *Cooling) Effort() utils.Norm { return s.components["flow-out"].Value() }
+func (s *Cooling) Effort() utils.Unit { return s.components["flow"].Value() }
 
 func (s *Cooling) Tick(inputs map[string]components.Component) {}

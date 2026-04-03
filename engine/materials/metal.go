@@ -10,8 +10,8 @@ type Metal struct {
 	MaxPressure         float64               // the maximum pressure of the metal (kPa)
 	HeatAbsorptionRate  float64               // how much heat is absorbed by the metal (C/tick)
 	MaxTemperatureDelta float64               // the maximum temperature delta per tick (C/tick)
-	TemperatureCurve    func(float64) float64 // the curve to calculate the applied temperature from the normalized value
-	PressureCurve       func(float64) float64 // the curve to calculate the applied pressure from the normalized value
+	TemperatureCurve    func(float64) float64 // the curve to calculate the applied temperature from the unit value
+	PressureCurve       func(float64) float64 // the curve to calculate the applied pressure from the unit value
 }
 
 func NewSteel() Metal {

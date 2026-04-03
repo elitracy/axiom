@@ -22,9 +22,9 @@ type inputHandler func(comp components.Component)
 type Subsystem interface {
 	ID() SubsystemID
 	Name() string
-	Effort() utils.Norm
+	Effort() utils.Unit
 	Components() map[string]*components.Component
-	AddComponent(string, components.ComponentType, utils.Norm)
+	AddComponent(string, components.ComponentType, utils.Unit)
 	String() string
 
 	Tick(inputs map[string]components.Component)
@@ -55,7 +55,7 @@ func (s *subsystemCore) Components() map[string]*components.Component {
 	return s.components
 }
 
-func (s *subsystemCore) AddComponent(name string, componentType components.ComponentType, value utils.Norm) {
+func (s *subsystemCore) AddComponent(name string, componentType components.ComponentType, value utils.Unit) {
 	component := components.NewComponent(name, componentType, value)
 	s.components[component.Name()] = component
 }

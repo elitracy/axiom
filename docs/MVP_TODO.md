@@ -50,7 +50,7 @@
 - [x] Connection system: ports on components, connections between subsystems with throughput multiplier
 - [x] DFS-based dependency resolution in WorldState.updateSubsystems()
 - [x] Power output feeds HVAC; cooling output feeds power
-- [ ] Integration test: kill coolant → power overheats → HVAC degrades (the cascade)
+- [x] Integration test: kill coolant → power overheats → HVAC degrades (the cascade)
 
 ---
 

@@ -38,15 +38,15 @@ func (ws *WorldState) AddPort(name string, subsystemID subsystems.SubsystemID, c
 	return port
 }
 
-func (ws *WorldState) addConnection(src *connections.Port, subsystemID subsystems.SubsystemID, throughput utils.Norm) {
-	connection := connections.NewConnection(src, subsystemID, throughput)
+func (ws *WorldState) addConnection(src *connections.Port, destID subsystems.SubsystemID, role string, throughput utils.Unit) {
+	connection := connections.NewConnection(src, destID, role, throughput)
 
 	_, exists := ws.ports[src.ID()]
 	if !exists {
 		return
 	}
 
-	ws.connections[subsystemID] = append(ws.connections[subsystemID], connection)
+	ws.connections[destID] = append(ws.connections[destID], connection)
 }
 
 func (ws *WorldState) Init() {
@@ -65,13 +65,13 @@ func (ws *WorldState) Init() {
 
 	powerPort := ws.AddPort("socket-1", power.ID(), power.Components()["power"])
 	powerTemp := ws.AddPort("valve-1", power.ID(), power.Components()["temp"])
-	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp-out"])
-	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow-out"])
+	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp"])
+	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow"])
 
-	ws.addConnection(powerPort, hvac.ID(), 1)
-	ws.addConnection(powerTemp, hvac.ID(), 1)
-	ws.addConnection(coolingFlowPort, power.ID(), 1)
-	ws.addConnection(coolingTempPort, power.ID(), 1)
+	ws.addConnection(powerPort, hvac.ID(), "power", 1)
+	ws.addConnection(powerTemp, hvac.ID(), "heat", 1)
+	ws.addConnection(coolingFlowPort, power.ID(), "cooling-rate", 1)
+	ws.addConnection(coolingTempPort, power.ID(), "cooling", 1)
 }
 
 // updates the world state
@@ -116,7 +116,7 @@ func (ws *WorldState) updateSubsystems() {
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
 			srcComp.SetValue(srcComp.Value() * conn.Throughput())
-			inputs[srcComp.Name()] = srcComp
+			inputs[conn.Role()] = srcComp
 		}
 		system.Tick(inputs)
 

@@ -1,6 +1,7 @@
 package subsystems
 
 import (
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -23,12 +24,14 @@ func NewPower(initPower utils.Norm) *Power {
 	power.AddComponent("power", components.Power, initPower)
 	power.AddComponent("temp", components.Temperature, 0)
 
-	power.onInput("coolant-temp", func(comp components.Component) {
+	power.onInput("temp-out", func(comp components.Component) {
 		power.state.coolantTemp += comp.Value()
+		power.state.coolantTemp = power.state.coolantTemp.Clamp()
 	})
 
-	power.onInput("coolant-flow", func(comp components.Component) {
+	power.onInput("flow-out", func(comp components.Component) {
 		power.state.coolantFlow += comp.Value()
+		power.state.coolantFlow = power.state.coolantTemp.Clamp()
 	})
 
 	return power
@@ -45,6 +48,7 @@ func (s *Power) Tick(inputs map[string]components.Component) {
 		s.state.coolantFlow,
 		s.components["power"].Value(),
 	)
+	logging.Info("DELTA: %.2f", delta)
 
 	s.components["temp"].AddValue(delta)
 }

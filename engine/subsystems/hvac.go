@@ -46,10 +46,9 @@ func (s *Hvac) Tick(inputs map[string]components.Component) {
 	s.dispatchInputs(inputs)
 
 	currentTemp := s.components["temp-ambient"].Value()
-	currentPower := s.components["power"].Value()
 
 	diff := utils.Norm(math.Abs(float64(s.targetTemp - currentTemp)))
-	coolDelta := min(currentPower, diff)
+	coolDelta := min(s.state.power, diff)
 
 	switch {
 	case currentTemp < s.targetTemp:

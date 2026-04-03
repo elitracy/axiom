@@ -6,7 +6,7 @@ import (
 )
 
 type powerTickState struct {
-	coolantFlow utils.Unit
+	coolantRate utils.Unit
 	coolantTemp utils.Unit
 }
 
@@ -24,7 +24,10 @@ func NewPower(initPower utils.Unit) *Power {
 	power.AddComponent("temp", components.Temperature, 0)
 
 	power.onInput("cooling", func(comp components.Component) { power.state.coolantTemp = comp.Value() })
-	power.onInput("cooling-rate", func(comp components.Component) { power.state.coolantFlow = comp.Value() })
+	power.onInput("cooling-rate", func(comp components.Component) { power.state.coolantRate = comp.Value() })
+
+	power.profiles["cooling"] = utils.NewThermalResponse(10, .05)
+	power.profiles["heating"] = utils.NewThermalResponse(10, .05)
 
 	return power
 }
@@ -34,18 +37,10 @@ func (s *Power) Effort() utils.Unit { return s.components["power"].Value() }
 func (s *Power) Tick(inputs map[string]components.Component) {
 	s.dispatchInputs(inputs)
 
-	delta := calcPowerTempDelta(
-		s.components["temp"].Value(),
-		s.state.coolantTemp,
-		s.state.coolantFlow,
-		s.components["power"].Value(),
-	)
+	currentTemp := s.components["temp"].Value()
 
-	s.components["temp"].AddValue(delta)
-}
+	heatingDelta := s.profiles["heating"].Delta(currentTemp, s.components["power"].Value())
+	coolingDelta := s.profiles["cooling"].Delta(currentTemp, s.state.coolantTemp) * s.state.coolantRate
 
-func calcPowerTempDelta(currentTemp, coolantTemp, coolingRate, heatRate utils.Unit) utils.Unit {
-	cooling := (currentTemp + coolantTemp) * -coolingRate
-
-	return min(heatRate+cooling, heatRate)
+	s.components["temp"].AddValue(heatingDelta + coolingDelta)
 }

@@ -68,8 +68,8 @@ func (ws *WorldState) Init() {
 	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp"])
 	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow"])
 
-	ws.addConnection(powerPort, hvac.ID(), "power", 1)
-	ws.addConnection(powerTemp, hvac.ID(), "heat", 1)
+	ws.addConnection(powerPort, hvac.ID(), "power", .5)
+	ws.addConnection(powerTemp, hvac.ID(), "heat", .5)
 	ws.addConnection(coolingFlowPort, power.ID(), "cooling-rate", 1)
 	ws.addConnection(coolingTempPort, power.ID(), "cooling", 1)
 }

@@ -61,12 +61,12 @@
 
 Connections currently route inputs by `ComponentType`, which conflates physical quantity with routing role. Change to role-based routing so each connection declares what role it fills on the destination subsystem.
 
-- [ ] Add `destRole string` to `Connection` struct
-- [ ] Change `Subsystem.Tick()` signature: `map[ComponentType][]Component` → `map[string][]Component`
-- [ ] Update `updateSubsystems()` to key inputs by `conn.DestRole()`
-- [ ] Update Power tick: read `inputs["coolant-temp"]` and `inputs["coolant-flow"]`
-- [ ] Update HVAC tick: read `inputs["power-in"]` and `inputs["heat-in"]`
-- [ ] Update `WorldState.Init()` to pass role names when creating connections
+- [x] Add `destRole string` to `Connection` struct
+- [x] Change `Subsystem.Tick()` signature: `map[ComponentType][]Component` → `map[string][]Component`
+- [x] Update `updateSubsystems()` to key inputs by `conn.DestRole()`
+- [x] Update Power tick: read `inputs["coolant-temp"]` and `inputs["coolant-flow"]`
+- [x] Update HVAC tick: read `inputs["power-in"]` and `inputs["heat-in"]`
+- [x] Update `WorldState.Init()` to pass role names when creating connections
 
 ---
 

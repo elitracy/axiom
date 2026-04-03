@@ -38,6 +38,7 @@ type subsystemCore struct {
 	name          string
 	components    map[string]*components.Component
 	inputHandlers map[string]inputHandler
+	profiles      map[string]utils.ThermalResponse
 }
 
 func newSubsystemCore(name string) *subsystemCore {
@@ -46,6 +47,7 @@ func newSubsystemCore(name string) *subsystemCore {
 		name:          name,
 		components:    make(map[string]*components.Component),
 		inputHandlers: make(map[string]inputHandler),
+		profiles:      make(map[string]utils.ThermalResponse),
 	}
 }
 

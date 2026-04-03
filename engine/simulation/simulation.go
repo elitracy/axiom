@@ -68,7 +68,7 @@ func (ws *WorldState) Init() {
 	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp-out"])
 	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow-out"])
 
-	ws.addConnection(powerPort, hvac.ID(), .5)
+	ws.addConnection(powerPort, hvac.ID(), 1)
 	ws.addConnection(powerTemp, hvac.ID(), 1)
 	ws.addConnection(coolingFlowPort, power.ID(), 1)
 	ws.addConnection(coolingTempPort, power.ID(), 1)
@@ -112,11 +112,11 @@ func (ws *WorldState) updateSubsystems() {
 			}
 		}
 
-		inputs := make(map[components.ComponentType][]components.Component, 0)
+		inputs := make(map[string]components.Component, 0)
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
 			srcComp.SetValue(srcComp.Value() * conn.Throughput())
-			inputs[srcComp.Type()] = append(inputs[srcComp.Type()], srcComp)
+			inputs[srcComp.Name()] = srcComp
 		}
 		system.Tick(inputs)
 

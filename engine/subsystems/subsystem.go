@@ -17,6 +17,8 @@ func newID() SubsystemID {
 
 type SubsystemID int64
 
+type inputHandler func(comp components.Component)
+
 type Subsystem interface {
 	ID() SubsystemID
 	Name() string
@@ -25,21 +27,25 @@ type Subsystem interface {
 	AddComponent(string, components.ComponentType, utils.Norm)
 	String() string
 
-	Tick(inputs map[components.ComponentType][]components.Component)
+	Tick(inputs map[string]components.Component)
+	onInput(name string, handler inputHandler)
+	dispatchInputs(inputs map[string]components.Component)
 }
 
 type subsystemCore struct {
 	Subsystem
-	id         SubsystemID
-	name       string
-	components map[string]*components.Component
+	id            SubsystemID
+	name          string
+	components    map[string]*components.Component
+	inputHandlers map[string]inputHandler
 }
 
 func newSubsystemCore(name string) *subsystemCore {
 	return &subsystemCore{
-		id:         newID(),
-		name:       name,
-		components: make(map[string]*components.Component),
+		id:            newID(),
+		name:          name,
+		components:    make(map[string]*components.Component),
+		inputHandlers: make(map[string]inputHandler),
 	}
 }
 
@@ -63,4 +69,16 @@ func (s subsystemCore) String() string {
 	}
 
 	return output
+}
+
+func (s *subsystemCore) onInput(name string, handler inputHandler) {
+	s.inputHandlers[name] = handler
+}
+
+func (s subsystemCore) dispatchInputs(inputs map[string]components.Component) {
+	for name, comp := range inputs {
+		if handler, exists := s.inputHandlers[name]; exists {
+			handler(comp)
+		}
+	}
 }

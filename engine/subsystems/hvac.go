@@ -11,9 +11,14 @@ const (
 	hvacHeatingRate = 0.5
 )
 
+type hvacTickState struct {
+	power utils.Norm
+}
+
 type Hvac struct {
 	*subsystemCore
 	targetTemp utils.Norm
+	state      hvacTickState
 }
 
 func NewHvac() *Hvac {
@@ -23,33 +28,27 @@ func NewHvac() *Hvac {
 	}
 	hvac.AddComponent("temp-ambient", components.Temperature, hvac.targetTemp)
 
+	hvac.onInput("heat", func(comp components.Component) {
+		delta := calcHvacHeatDelta(hvac.targetTemp, comp.Value(), hvacHeatingRate)
+		hvac.components["temp-ambient"].AddValue(delta)
+	})
+
+	hvac.onInput("power", func(comp components.Component) {
+		hvac.state.power = comp.Value()
+	})
+
 	return hvac
 }
 
 func (s *Hvac) Effort() utils.Norm { return s.components["temp-ambient"].Value() }
 
-func (s *Hvac) Tick(inputs map[components.ComponentType][]components.Component) {
-	power := utils.Norm(0.0)
-	if powers, ok := inputs[components.Power]; ok {
-		for _, p := range powers {
-			power += p.Value()
-		}
-
-	}
-
-	heat := utils.Norm(0.0)
-	if temps, ok := inputs[components.Temperature]; ok {
-		for _, t := range temps {
-			heat += t.Value()
-		}
-	}
-	heatDelta := calcHvacHeatDelta(s.targetTemp, heat, hvacHeatingRate)
-
-	s.components["temp-ambient"].AddValue(heatDelta)
+func (s *Hvac) Tick(inputs map[string]components.Component) {
+	s.dispatchInputs(inputs)
 
 	currentTemp := s.components["temp-ambient"].Value()
+
 	diff := utils.Norm(math.Abs(float64(s.targetTemp - currentTemp)))
-	coolDelta := min(power, diff)
+	coolDelta := min(s.state.power, diff)
 
 	switch {
 	case currentTemp < s.targetTemp:
@@ -57,7 +56,6 @@ func (s *Hvac) Tick(inputs map[components.ComponentType][]components.Component) 
 	case currentTemp > s.targetTemp:
 		s.components["temp-ambient"].AddValue(-coolDelta)
 	}
-
 }
 
 func calcHvacHeatDelta(targetTemp, heat, rate utils.Norm) utils.Norm {

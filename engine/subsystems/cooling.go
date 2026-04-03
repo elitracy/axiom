@@ -22,4 +22,4 @@ func NewCooling(initEffort utils.Norm) *Cooling {
 
 func (s *Cooling) Effort() utils.Norm { return s.components["flow-out"].Value() }
 
-func (s *Cooling) Tick(inputs map[components.ComponentType][]components.Component) {}
+func (s *Cooling) Tick(inputs map[string]components.Component) {}

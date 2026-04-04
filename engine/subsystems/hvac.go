@@ -43,8 +43,3 @@ func (s *Hvac) Tick(inputs map[string]components.Component) {
 
 	s.components["temp"].AddValue(net + regulationDelta)
 }
-
-func calcHvacHeatDelta(targetTemp, heat, rate utils.Unit) utils.Unit {
-	heating := (heat - targetTemp) * rate
-	return heating
-}

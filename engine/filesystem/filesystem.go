@@ -1,17 +1,31 @@
 package filesystem
 
 import (
-	"fmt"
-	"slices"
 	"strings"
 )
 
 type Shell struct {
-	cwd *Node
+	cwd  *Node
+	root *Node
+}
+
+func NewShell(root *Node) *Shell {
+	return &Shell{
+		cwd:  root,
+		root: root,
+	}
 }
 
 func (s *Shell) Ls(path string) string {
-	return s.cwd.Ls(path)
+	if path == "" {
+		return s.cwd.ls(path)
+	}
+
+	if path[0] == '/' {
+		s.root.ls(path)
+	}
+
+	return s.cwd.ls(path)
 }
 
 func (s *Shell) Cd(path string) {
@@ -24,97 +38,25 @@ func (s *Shell) Cd(path string) {
 		s.cwd = s.cwd.Parent()
 	}
 
-	dir, remaining, _ := strings.Cut(path, "/")
+	node := s.cwd.GetChild(path)
 
-	node, exists := s.cwd.children[dir]
-
-	// bad cd
-	if !exists {
-		return
-	}
-
-	// at last point
-	if remaining == "" {
+	if node != nil {
 		s.cwd = node
 	}
 
-	if exists && node.IsDir() {
-		if remaining == "" {
-			s.Cd(path)
-			return
-		}
-
-		s.Cd(dir)
-	}
-
 }
 
-type Node struct {
-	name     string
-	children map[string]*Node
-	parent   *Node
+func (s Shell) Cat(path string) string {
+	path = strings.Trim(path, "/")
+	node := s.cwd.GetChild(path)
 
-	reader func() string
+	if node == nil {
+		return ""
+	}
+
+	return node.read()
 }
 
-func NewNode(path string) *Node {
-
-	isDir := path[len(path)-1] == '/'
-
-	parts := strings.Split(path, "/")
-
-	node := &Node{
-		name: parts[len(parts)-1],
-	}
-
-	if isDir {
-		node.children = make(map[string]*Node)
-
-	}
-
-	return node
-}
-
-func (n *Node) Name() string         { return n.name + "/" }
-func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
-func (n *Node) Parent() *Node        { return n.parent }
-func (n *Node) SetParent(node *Node) { n.parent = node }
-func (n *Node) IsDir() bool          { return n.children == nil }
-
-func (n *Node) Ls(path string) string {
-
-	if path == ".." {
-		if n.Parent() == nil {
-			return "Invalid Path"
-		}
-
-		return n.Parent().Ls("")
-	}
-
-	if path == "" || path == "." {
-		children := []string{}
-		for _, child := range n.children {
-			children = append(children, child.Name())
-		}
-
-		slices.Sort(children)
-
-		output := ""
-		for _, child := range children {
-			output += fmt.Sprintf("%s\n", child)
-		}
-
-		return output
-	}
-
-	pathParts := strings.Split(path, "/")
-
-	child, exists := n.children[pathParts[0]]
-
-	if !exists {
-		return "Invalid path"
-	}
-
-	remaining := strings.Join(pathParts[1:], "/")
-	return child.Ls(remaining)
+func (s Shell) Pwd() string {
+	return s.cwd.pwd()
 }

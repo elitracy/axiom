@@ -1,17 +1,31 @@
 package filesystem
 
+import (
+	"strings"
+)
+
 type Shell struct {
-	cwd *Node
+	cwd  *Node
+	root *Node
 }
 
 func NewShell(root *Node) *Shell {
 	return &Shell{
-		cwd: root,
+		cwd:  root,
+		root: root,
 	}
 }
 
 func (s *Shell) Ls(path string) string {
-	return s.cwd.Ls(path)
+	if path == "" {
+		return s.cwd.ls(path)
+	}
+
+	if path[0] == '/' {
+		s.root.ls(path)
+	}
+
+	return s.cwd.ls(path)
 }
 
 func (s *Shell) Cd(path string) {
@@ -33,11 +47,16 @@ func (s *Shell) Cd(path string) {
 }
 
 func (s Shell) Cat(path string) string {
+	path = strings.Trim(path, "/")
 	node := s.cwd.GetChild(path)
 
 	if node == nil {
 		return ""
 	}
 
-	return node.Read()
+	return node.read()
+}
+
+func (s Shell) Pwd() string {
+	return s.cwd.pwd()
 }

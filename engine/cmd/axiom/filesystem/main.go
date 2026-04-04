@@ -1,32 +1,36 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/elias/axiom/engine/filesystem"
 )
 
 func main() {
 
-	root := filesystem.NewNode("root/")
+	root := filesystem.NewDir("/")
 	shell := filesystem.NewShell(root)
 
-	systems := filesystem.NewNode("systems/")
-	sensors := filesystem.NewNode("sensors/")
-	log.Printf(systems.Name())
-	log.Printf(sensors.Name())
+	systems := filesystem.NewDir("systems/")
+	sensors := filesystem.NewDir("sensors/")
+	file := filesystem.NewFile("file.txt")
 
 	root.AddChild(systems)
 	root.AddChild(sensors)
 
-	power := filesystem.NewNode("power/")
-	coolant := filesystem.NewNode("coolant/")
-	lifesupport := filesystem.NewNode("life_support/")
+	power := filesystem.NewDir("power/")
+	coolant := filesystem.NewDir("coolant/")
+	lifesupport := filesystem.NewDir("life_support/")
 
 	systems.AddChild(power)
 	systems.AddChild(coolant)
 	systems.AddChild(lifesupport)
 
-	log.Printf("\n" + shell.Ls(""))
+	power.AddChild(file)
+	shell.Cd("systems/power/")
+
+	file.Write("test input\nnew line as well")
+	// fmt.Println(shell.Cat("file.txt"))
+	fmt.Printf(shell.Ls(""))
 
 }

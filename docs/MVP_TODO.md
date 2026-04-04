@@ -75,11 +75,11 @@ Connections currently route inputs by `ComponentType`, which conflates physical 
 
 Replace inline constants and ad-hoc formulas with named response profiles. Each profile describes how an input affects a component: gain (fraction of gap closed per tick), ceiling (max delta), floor (min drift).
 
-- [ ] `ThermalResponse` struct with `Gain`, `Ceiling`, `Floor` fields and `Delta(current, target)` method
-- [ ] Refactor Power tick to use profiles for coolant-temp and coolant-flow responses
-- [ ] Refactor HVAC tick to use profiles for heat-in and power-in responses
-- [ ] Remove `hvacHeatingRate` const, `calcHvacHeatDelta`, `calcPowerTempDelta`
-- [ ] All tuning knobs visible in one place per subsystem, not scattered in formulas
+- [x] `ThermalResponse` struct with `Gain`, `Ceiling`, `Floor` fields and `Delta(current, target)` method
+- [x] Refactor Power tick to use profiles for coolant-temp and coolant-flow responses
+- [x] Refactor HVAC tick to use profiles for heat-in and power-in responses
+- [x] Remove `hvacHeatingRate` const, `calcHvacHeatDelta`, `calcPowerTempDelta`
+- [x] All tuning knobs visible in one place per subsystem, not scattered in formulas
 
 ---
 
@@ -90,11 +90,11 @@ Replace inline constants and ad-hoc formulas with named response profiles. Each 
 
 The VFS exists but can't read/write content. Add the ability for file nodes to serve live data (virtual readers) or store editable content.
 
-- [ ] Add `content string`, `writable bool` to `Node`
-- [ ] `Read()` method: if `reader != nil` call it, else return `content`
-- [ ] `Write(content)` method: if `writable` set content, else error
-- [ ] `Cat(path)` method: resolve path and call `Read()`
-- [ ] Fix `Cd()` recursion bug
+- [x] Add `content string`, `writable bool` to `Node`
+- [x] `Read()` method: if `reader != nil` call it, else return `content`
+- [x] `Write(content)` method: if `writable` set content, else error
+- [x] `Cat(path)` method: resolve path and call `Read()`
+- [x] Fix `Cd()` recursion bug
 
 ---
 

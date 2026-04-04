@@ -2,38 +2,58 @@ package filesystem
 
 import (
 	"fmt"
-	"log"
 	"slices"
 	"strings"
+	"time"
 )
 
 type Node struct {
 	name     string
-	children map[string]*Node
 	parent   *Node
+	children map[string]*Node
 
-	content  string
+	createdAt time.Time
+	updatedAt time.Time
+
+	isDir    bool
 	writable bool
 	reader   func() string
+
+	content string
 }
 
-func NewNode(path string) *Node {
-
-	isDir := path[len(path)-1] == '/'
-
+func NewDir(path string) *Node {
+	path = strings.Trim(path, "/")
 	parts := strings.Split(path, "/")
-	log.Printf("%v", parts)
+
+	name := parts[len(parts)-1]
+	// if len(parts) == 1 && parts[0] == "" {
+	// 	name = "/"
+	// }
 
 	node := &Node{
-		name:     parts[len(parts)-2],
-		writable: true,
+		name:      name,
+		children:  make(map[string]*Node),
+		writable:  false,
+		isDir:     true,
+		createdAt: time.Now(),
+		updatedAt: time.Now(),
 	}
 
-	if isDir {
-		node.children = make(map[string]*Node)
+	return node
+}
 
+func NewFile(path string) *Node {
+	path = strings.Trim(path, "/")
+	parts := strings.Split(path, "/")
+
+	node := &Node{
+		name:      parts[len(parts)-1],
+		writable:  true,
+		isDir:     false,
+		createdAt: time.Now(),
+		updatedAt: time.Now(),
 	}
-	log.Printf(node.String())
 
 	return node
 }
@@ -48,17 +68,15 @@ func (n *Node) Name() string {
 func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
 func (n *Node) Parent() *Node        { return n.parent }
 func (n *Node) SetParent(node *Node) { n.parent = node }
-func (n *Node) IsDir() bool          { return n.children == nil }
+func (n *Node) IsDir() bool          { return n.isDir }
 
 func (n *Node) GetChild(path string) *Node {
-	if n.name == path {
+	path = strings.Trim(path, "/")
+	if path == "" {
 		return n
 	}
 
 	parts := strings.Split(path, "/")
-	if len(parts) == 0 {
-		return nil
-	}
 
 	nextChild := parts[0]
 	remaining := strings.Join(parts[1:], "/")
@@ -73,15 +91,15 @@ func (n *Node) GetChild(path string) *Node {
 
 }
 
-func (n *Node) Ls(path string) string {
-	log.Printf("CHILDREN: %v", n.children)
+func (n *Node) ls(path string) string {
+	path = strings.Trim(path, "/")
 
 	if path == ".." {
 		if n.Parent() == nil {
 			return "Invalid Path"
 		}
 
-		return n.Parent().Ls("")
+		return n.Parent().ls("")
 	}
 
 	if path == "" || path == "." {
@@ -112,10 +130,10 @@ func (n *Node) Ls(path string) string {
 	}
 
 	remaining := strings.Join(pathParts[1:], "/")
-	return child.Ls(remaining)
+	return child.ls(remaining)
 }
 
-func (n Node) Read() string {
+func (n Node) read() string {
 	if n.reader != nil {
 		n.reader()
 	}
@@ -123,9 +141,10 @@ func (n Node) Read() string {
 	return n.content
 }
 
-func (n Node) Write(content string) {
+func (n *Node) Write(content string) {
 	if n.writable {
 		n.content = content
+		n.updatedAt = time.Now()
 	}
 }
 
@@ -146,7 +165,15 @@ func (n Node) String() string {
 	}
 
 	output += fmt.Sprintf(" axiom")
-	output += fmt.Sprintf(" %s", n.name)
+	output += n.updatedAt.Format(" Jan 01 15:04")
+	output += fmt.Sprintf(" %s", n.Name())
 
 	return output
+}
+
+func (n Node) pwd() string {
+	if n.parent == nil {
+		return n.Name()
+	}
+	return n.parent.pwd() + n.Name()
 }

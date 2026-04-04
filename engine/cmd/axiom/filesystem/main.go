@@ -8,12 +8,16 @@ import (
 
 func main() {
 
-	home := filesystem.NewNode("root/")
+	root := filesystem.NewNode("root/")
+	shell := filesystem.NewShell(root)
+
 	systems := filesystem.NewNode("systems/")
 	sensors := filesystem.NewNode("sensors/")
+	log.Printf(systems.Name())
+	log.Printf(sensors.Name())
 
-	home.AddChild(systems)
-	home.AddChild(sensors)
+	root.AddChild(systems)
+	root.AddChild(sensors)
 
 	power := filesystem.NewNode("power/")
 	coolant := filesystem.NewNode("coolant/")
@@ -23,6 +27,6 @@ func main() {
 	systems.AddChild(coolant)
 	systems.AddChild(lifesupport)
 
-	ls := home.Ls("")
-	log.Printf("\n" + ls)
+	log.Printf("\n" + shell.Ls(""))
+
 }

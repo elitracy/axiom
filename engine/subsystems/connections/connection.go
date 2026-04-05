@@ -1,6 +1,7 @@
 package connections
 
 import (
+	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -18,17 +19,17 @@ func newConnectionID() ConnectionID {
 
 type Connection struct {
 	id         ConnectionID
-	src        *Port
-	dest       *Port
+	src        *subsystems.Port
+	dest       *subsystems.Port
 	throughput utils.Unit
 }
 
-func (c Connection) ID() ConnectionID       { return c.id }
-func (c Connection) Src() *Port             { return c.src }
-func (c Connection) Dest() *Port            { return c.dest }
-func (c Connection) Throughput() utils.Unit { return c.throughput }
+func (c Connection) ID() ConnectionID           { return c.id }
+func (c Connection) SrcPort() *subsystems.Port  { return c.src }
+func (c Connection) DestPort() *subsystems.Port { return c.dest }
+func (c Connection) Throughput() utils.Unit     { return c.throughput }
 
-func NewConnection(src *Port, dest *Port, throughput utils.Unit) *Connection {
+func NewConnection(src *subsystems.Port, dest *subsystems.Port, throughput utils.Unit) *Connection {
 	return &Connection{
 		id:         newConnectionID(),
 		src:        src,

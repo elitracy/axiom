@@ -30,8 +30,8 @@ func NewHvac() *Hvac {
 
 func (s *Hvac) Effort() utils.Unit { return s.components["temp"].Value() }
 
-func (s *Hvac) Tick(inputs map[string]components.Component) {
-	s.dispatchInputs(inputs)
+func (s *Hvac) Tick() {
+	s.dispatchInputs()
 
 	currentTemp := s.components["temp"].Value()
 	inputTemp := s.components["temp-in"].Value()

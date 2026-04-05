@@ -6,7 +6,6 @@ import (
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
-	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -14,7 +13,6 @@ import (
 type WorldState struct {
 	subsystems  map[subsystems.SubsystemID]subsystems.Subsystem
 	connections map[subsystems.SubsystemID][]*connections.Connection
-	ports       map[connections.PortID]*connections.Port
 }
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
@@ -23,32 +21,20 @@ func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 
 }
 
-func (ws *WorldState) AddPort(name string, subsystem subsystems.Subsystem, component string) *connections.Port {
-	comp, exists := subsystem.Components()[component]
+func (ws *WorldState) addConnection(src subsystems.Subsystem, srcPortName string, dest subsystems.Subsystem, destPortName string, throughput utils.Unit) error {
+	srcPort, exists := src.Ports()[srcPortName]
 	if !exists {
-		return nil
+		return fmt.Errorf("Port %s doesn't exist on subsystem %s", srcPortName, src.Name())
 	}
 
-	port := connections.NewPort(name, comp, subsystem)
-	ws.ports[port.ID()] = port
-
-	return port
-}
-
-func (ws *WorldState) addConnection(src *connections.Port, dest *connections.Port, throughput utils.Unit) error {
-	connection := connections.NewConnection(src, dest, throughput)
-
-	_, srcExists := ws.ports[src.ID()]
-	if !srcExists {
-		return fmt.Errorf("src port doesn't exist: %v", src)
+	destPort, exists := dest.Ports()[destPortName]
+	if !exists {
+		return fmt.Errorf("Port %s doesn't exist on subsystem %s", destPortName, dest.Name())
 	}
 
-	_, destExists := ws.ports[dest.ID()]
-	if !destExists {
-		return fmt.Errorf("dest port doesn't exist: %v", dest)
-	}
+	connection := connections.NewConnection(srcPort, destPort, throughput)
 
-	ws.connections[dest.Subsystem().ID()] = append(ws.connections[dest.Subsystem().ID()], connection)
+	ws.connections[dest.ID()] = append(ws.connections[dest.ID()], connection)
 
 	return nil
 }
@@ -57,7 +43,6 @@ func (ws *WorldState) Init() {
 
 	ws.subsystems = make(map[subsystems.SubsystemID]subsystems.Subsystem)
 	ws.connections = make(map[subsystems.SubsystemID][]*connections.Connection)
-	ws.ports = make(map[connections.PortID]*connections.Port)
 
 	reactor := subsystems.NewPower(.5)
 	cooler := subsystems.NewCooling(.5)
@@ -67,25 +52,26 @@ func (ws *WorldState) Init() {
 	ws.addSubsystem(cooler)
 	ws.addSubsystem(acUnit)
 
-	acPowerPort := ws.AddPort("socket-1", acUnit, "power-in")
-	acTempPort := ws.AddPort("valve-1", acUnit, "temp-in")
-	reactorPowerPort := ws.AddPort("socket-1", reactor, "power-out")
+	reactor.AddPort("socket-1", "power-out")
+	reactor.AddPort("valve-1", "temp-in")
+	reactor.AddPort("valve-2", "temp-out")
 
-	reactorTempInPort := ws.AddPort("valve-1", reactor, "temp-in")
-	reactorTempOutPort := ws.AddPort("valve-1", reactor, "temp-out")
-	coolerTempPort := ws.AddPort("valve-1", cooler, "temp-out")
+	acUnit.AddPort("socket-1", "power-in")
+	acUnit.AddPort("valve-1", "temp-in")
 
-	err := ws.addConnection(reactorPowerPort, acPowerPort, 0.5)
+	cooler.AddPort("valve-1", "temp-out")
+
+	err := ws.addConnection(reactor, "socket-1", acUnit, "socket-1", 0.5)
 	if err != nil {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(reactorTempOutPort, acTempPort, 0.5)
+	err = ws.addConnection(reactor, "valve-1", acUnit, "valve-1", 0.5)
 	if err != nil {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(coolerTempPort, reactorTempInPort, 1)
+	err = ws.addConnection(cooler, "valve-1", reactor, "valve-2", 1)
 	if err != nil {
 		logging.Error(err.Error())
 	}
@@ -115,12 +101,11 @@ func (ws *WorldState) updateSubsystems() {
 
 			visited[subsystem.ID()] = struct{}{}
 			if len(ws.connections[subsystem.ID()]) <= 0 {
-				subsystem.Tick(nil)
+				subsystem.Tick()
 			}
 
 			for _, conn := range ws.connections[subsystem.ID()] {
-				port := ws.ports[conn.Src().ID()]
-				src := port.Subsystem()
+				src := conn.SrcPort().Subsystem()
 				if _, seen := visited[src.ID()]; !seen {
 					subsystem := ws.subsystems[src.ID()]
 					depStack.Push(subsystem)
@@ -129,15 +114,11 @@ func (ws *WorldState) updateSubsystems() {
 			}
 		}
 
-		inputs := make(map[string]components.Component, 0)
 		for _, conn := range ws.connections[system.ID()] {
-			srcComp := *conn.Src().Component()
-			destComp := *conn.Dest().Component()
+			srcComp := *conn.SrcPort().Component()
 			srcComp.SetValue(srcComp.Value() * conn.Throughput())
-
-			inputs[destComp.Name()] = srcComp
 		}
-		system.Tick(inputs)
+		system.Tick()
 
 	}
 

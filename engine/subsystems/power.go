@@ -19,7 +19,11 @@ func NewPower(initPower utils.Unit) *Power {
 	power.AddComponent("power-out", components.Power, initPower)
 	power.AddComponent("temp-out", components.Temperature, 0)
 
-	power.onInput("temp-in", func(comp components.Component) { power.components["temp-in"].SetValue(comp.Value()) })
+	power.onInput("temp-in", func(comp components.Component) {
+
+		power.components["temp-in"].SetValue(comp.Value())
+
+	})
 
 	power.profiles["cooling"] = utils.NewThermalResponse(10, .05)
 	power.profiles["heating"] = utils.NewThermalResponse(10, .05)
@@ -29,8 +33,8 @@ func NewPower(initPower utils.Unit) *Power {
 
 func (s *Power) Effort() utils.Unit { return s.components["power"].Value() }
 
-func (s *Power) Tick(inputs map[string]components.Component) {
-	s.dispatchInputs(inputs)
+func (s *Power) Tick() {
+	s.dispatchInputs()
 
 	currentTemp := s.components["temp-out"].Value()
 

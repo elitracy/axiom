@@ -21,4 +21,4 @@ func NewCooling(initEffort utils.Unit) *Cooling {
 
 func (s *Cooling) Effort() utils.Unit { return 1 }
 
-func (s *Cooling) Tick(inputs map[string]components.Component) {}
+func (s *Cooling) Tick() {}

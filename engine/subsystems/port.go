@@ -1,7 +1,6 @@
-package connections
+package subsystems
 
 import (
-	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 )
 
@@ -21,15 +20,15 @@ type Port struct {
 	id        PortID
 	name      string
 	component *components.Component
-	subsystem subsystems.Subsystem
+	subsystem Subsystem
 }
 
 func (p Port) ID() PortID                       { return p.id }
 func (p Port) Name() string                     { return p.name }
 func (p Port) Component() *components.Component { return p.component }
-func (p Port) Subsystem() subsystems.Subsystem  { return p.subsystem }
+func (p Port) Subsystem() Subsystem { return p.subsystem}
 
-func NewPort(name string, component *components.Component, subsystem subsystems.Subsystem) *Port {
+func NewPort(name string, subsystem Subsystem,  component *components.Component) *Port {
 	return &Port{
 		id:        newPortID(),
 		name:      name,

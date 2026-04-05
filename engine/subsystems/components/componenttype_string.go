@@ -9,14 +9,12 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[Temperature-0]
-	_ = x[Effort-1]
-	_ = x[Power-2]
-	_ = x[Flow-3]
+	_ = x[Power-1]
 }
 
-const _ComponentType_name = "TemperatureEffortPowerFlow"
+const _ComponentType_name = "TemperaturePower"
 
-var _ComponentType_index = [...]uint8{0, 11, 17, 22, 26}
+var _ComponentType_index = [...]uint8{0, 11, 16}
 
 func (i ComponentType) String() string {
 	idx := int(i) - 0

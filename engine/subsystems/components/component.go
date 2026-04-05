@@ -17,9 +17,7 @@ func newComponentID() ComponentID {
 //go:generate stringer -type=ComponentType
 const (
 	Temperature ComponentType = iota
-	Effort
 	Power
-	Flow
 )
 
 type Component struct {

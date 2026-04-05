@@ -1,0 +1,9 @@
+system reactor          type=power
+system coolant_loop     type=cooling
+system air_conditioning type=hvac
+
+set power.output 0.5
+set hvac.target  0.2
+
+connect cooling.valve-1 -> power.valve-1 1.0
+connect power.socket-1  -> hvac.socket-1 0.5

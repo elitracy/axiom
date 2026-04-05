@@ -5,15 +5,9 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-type hvacTickState struct {
-	power utils.Unit
-	heat  utils.Unit
-}
-
 type Hvac struct {
 	*subsystemCore
 	targetTemp utils.Unit
-	state      hvacTickState
 }
 
 func NewHvac() *Hvac {
@@ -21,10 +15,13 @@ func NewHvac() *Hvac {
 		subsystemCore: newSubsystemCore("HVAC"),
 		targetTemp:    utils.Unit(.2),
 	}
+	hvac.AddComponent("temp-in", components.Temperature, hvac.targetTemp)
+	hvac.AddComponent("power-in", components.Power, 0)
+
 	hvac.AddComponent("temp", components.Temperature, hvac.targetTemp)
 
-	hvac.onInput("heat", func(comp components.Component) { hvac.state.heat = comp.Value() })
-	hvac.onInput("power", func(comp components.Component) { hvac.state.power = comp.Value() })
+	hvac.onInput("temp-in", func(comp components.Component) { hvac.components["temp-in"].SetValue(comp.Value()) })
+	hvac.onInput("power-in", func(comp components.Component) { hvac.components["power-in"].SetValue(comp.Value()) })
 
 	hvac.profiles["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
 
@@ -37,8 +34,10 @@ func (s *Hvac) Tick(inputs map[string]components.Component) {
 	s.dispatchInputs(inputs)
 
 	currentTemp := s.components["temp"].Value()
+	inputTemp := s.components["temp-in"].Value()
+	effort := s.components["power-in"].Value()
 
-	net := max(0, s.state.heat-s.state.power)
+	net := max(0, inputTemp-effort)
 	regulationDelta := s.profiles["temp-regulation"].Delta(currentTemp, s.targetTemp)
 
 	s.components["temp"].AddValue(net + regulationDelta)

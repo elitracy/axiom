@@ -19,17 +19,17 @@ func newConnectionID() ConnectionID {
 
 type Connection struct {
 	id         ConnectionID
-	src        *subsystems.Port
-	dest       *subsystems.Port
+	src        *subsystems.OutputPort
+	dest       *subsystems.InputPort
 	throughput utils.Unit
 }
 
-func (c Connection) ID() ConnectionID           { return c.id }
-func (c Connection) SrcPort() *subsystems.Port  { return c.src }
-func (c Connection) DestPort() *subsystems.Port { return c.dest }
-func (c Connection) Throughput() utils.Unit     { return c.throughput }
+func (c Connection) ID() ConnectionID            { return c.id }
+func (c Connection) Src() *subsystems.OutputPort { return c.src }
+func (c Connection) Dest() *subsystems.InputPort { return c.dest }
+func (c Connection) Throughput() utils.Unit      { return c.throughput }
 
-func NewConnection(src *subsystems.Port, dest *subsystems.Port, throughput utils.Unit) *Connection {
+func NewConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, throughput utils.Unit) *Connection {
 	return &Connection{
 		id:         newConnectionID(),
 		src:        src,

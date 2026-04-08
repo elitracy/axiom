@@ -17,16 +17,17 @@ func newID() SubsystemID {
 
 type SubsystemID int64
 
-type inputHandler func(port *Port)
+type inputHandler func(port *InputPort)
 
 type Subsystem interface {
 	ID() SubsystemID
 	Name() string
 	Effort() utils.Unit
 	Components() map[string]*components.Component
-	Ports() map[string]*Port
+	InputPorts() map[string]*InputPort
+	OutputPorts() map[string]*OutputPort
 	AddComponent(string, components.ComponentType, utils.Unit) error
-	AddPort(string, string) error
+	AddPort(string, string, PortType) error
 	String() string
 
 	Tick()
@@ -41,7 +42,8 @@ type subsystemCore struct {
 	components    map[string]*components.Component
 	inputHandlers map[string]inputHandler
 	profiles      map[string]utils.ThermalResponse
-	ports         map[string]*Port
+	inputPorts    map[string]*InputPort
+	outputPorts   map[string]*OutputPort
 }
 
 func newSubsystemCore(name string) *subsystemCore {
@@ -51,7 +53,8 @@ func newSubsystemCore(name string) *subsystemCore {
 		components:    make(map[string]*components.Component),
 		inputHandlers: make(map[string]inputHandler),
 		profiles:      make(map[string]utils.ThermalResponse),
-		ports:         make(map[string]*Port),
+		inputPorts:    make(map[string]*InputPort),
+		outputPorts:   make(map[string]*OutputPort),
 	}
 }
 
@@ -60,9 +63,8 @@ func (s *subsystemCore) Name() string    { return s.name }
 func (s *subsystemCore) Components() map[string]*components.Component {
 	return s.components
 }
-func (s *subsystemCore) Ports() map[string]*Port {
-	return s.ports
-}
+func (s *subsystemCore) InputPorts() map[string]*InputPort   { return s.inputPorts }
+func (s *subsystemCore) OutputPorts() map[string]*OutputPort { return s.outputPorts }
 
 func (s *subsystemCore) AddComponent(name string, componentType components.ComponentType, value utils.Unit) error {
 	if _, exists := s.components[name]; exists {
@@ -75,17 +77,27 @@ func (s *subsystemCore) AddComponent(name string, componentType components.Compo
 	return nil
 }
 
-func (s *subsystemCore) AddPort(name string, componentName string) error {
+func (s *subsystemCore) AddPort(name string, componentName string, portType PortType) error {
 	if _, exists := s.components[componentName]; !exists {
 		return fmt.Errorf("Could not add port, component %v doesn't exist on %v", componentName, s.Name())
 	}
+	switch portType {
+	case Input:
+		if _, exists := s.inputPorts[name]; exists {
+			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
+		}
 
-	if _, exists := s.ports[name]; exists {
-		return fmt.Errorf("Could not add port, port %v already exists on %v", name, s.Name())
+		port := NewInputPort(name, s, s.Components()[componentName])
+		s.inputPorts[name] = port
+
+	case Output:
+		if _, exists := s.outputPorts[name]; exists {
+			return fmt.Errorf("Could not add port, output port %v already exists on %v", name, s.Name())
+		}
+
+		port := NewOutputPort(name, s, s.Components()[componentName])
+		s.outputPorts[name] = port
 	}
-
-	port := NewPort(name, s, s.Components()[componentName])
-	s.ports[name] = port
 
 	return nil
 }
@@ -106,8 +118,8 @@ func (s *subsystemCore) onInput(name string, handler inputHandler) {
 }
 
 func (s subsystemCore) dispatchInputs() {
-	for _, port := range s.ports {
-		if handler, exists := s.inputHandlers[port.component.Name()]; exists {
+	for _, port := range s.inputPorts {
+		if handler, exists := s.inputHandlers[port.Component().Name()]; exists {
 			handler(port)
 		}
 	}

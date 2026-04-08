@@ -1,8 +1,6 @@
 package simulation
 
 import (
-	"fmt"
-
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
@@ -21,20 +19,10 @@ func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 
 }
 
-func (ws *WorldState) addConnection(src subsystems.Subsystem, srcPortName string, dest subsystems.Subsystem, destPortName string, throughput utils.Unit) error {
-	srcPort, exists := src.Ports()[srcPortName]
-	if !exists {
-		return fmt.Errorf("Port %s doesn't exist on subsystem %s", srcPortName, src.Name())
-	}
+func (ws *WorldState) addConnection(output *subsystems.OutputPort, input *subsystems.InputPort, throughput utils.Unit) error {
+	connection := connections.NewConnection(output, input, throughput)
 
-	destPort, exists := dest.Ports()[destPortName]
-	if !exists {
-		return fmt.Errorf("Port %s doesn't exist on subsystem %s", destPortName, dest.Name())
-	}
-
-	connection := connections.NewConnection(srcPort, destPort, throughput)
-
-	ws.connections[dest.ID()] = append(ws.connections[dest.ID()], connection)
+	ws.connections[output.Subsystem().ID()] = append(ws.connections[output.Subsystem().ID()], connection)
 
 	return nil
 }
@@ -52,26 +40,26 @@ func (ws *WorldState) Init() {
 	ws.addSubsystem(cooler)
 	ws.addSubsystem(acUnit)
 
-	reactor.AddPort("socket-1", "power-out")
-	reactor.AddPort("valve-1", "temp-in")
-	reactor.AddPort("valve-2", "temp-out")
+	reactor.AddPort("socket-1", "power-out", subsystems.Output)
+	reactor.AddPort("valve-1", "temp-in", subsystems.Input)
+	reactor.AddPort("valve-2", "temp-out", subsystems.Output)
 
-	acUnit.AddPort("socket-1", "power-in")
-	acUnit.AddPort("valve-1", "temp-in")
+	acUnit.AddPort("socket-1", "power-in", subsystems.Input)
+	acUnit.AddPort("valve-1", "temp-in", subsystems.Input)
 
-	cooler.AddPort("valve-1", "temp-out")
+	cooler.AddPort("valve-1", "temp-out", subsystems.Output)
 
-	err := ws.addConnection(reactor, "socket-1", acUnit, "socket-1", 0.5)
+	err := ws.addConnection(reactor.OutputPorts()["socket-1"], acUnit.InputPorts()["socket-1"], 0.5)
 	if err != nil {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(reactor, "valve-1", acUnit, "valve-1", 0.5)
+	err = ws.addConnection(reactor.OutputPorts()["valve-1"], acUnit.InputPorts()["valve-1"], 0.5)
 	if err != nil {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(cooler, "valve-1", reactor, "valve-2", 1)
+	err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-2"], 1)
 	if err != nil {
 		logging.Error(err.Error())
 	}
@@ -105,7 +93,7 @@ func (ws *WorldState) updateSubsystems() {
 			}
 
 			for _, conn := range ws.connections[subsystem.ID()] {
-				src := conn.SrcPort().Subsystem()
+				src := conn.Src().Subsystem()
 				if _, seen := visited[src.ID()]; !seen {
 					subsystem := ws.subsystems[src.ID()]
 					depStack.Push(subsystem)
@@ -115,8 +103,8 @@ func (ws *WorldState) updateSubsystems() {
 		}
 
 		for _, conn := range ws.connections[system.ID()] {
-			srcComp := *conn.SrcPort().Component()
-			srcComp.SetValue(srcComp.Value() * conn.Throughput())
+			srcComp := *conn.Src().Component()
+			conn.Dest().SetInput(srcComp.Value() * conn.Throughput())
 		}
 		system.Tick()
 

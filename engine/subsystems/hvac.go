@@ -20,8 +20,8 @@ func NewHvac() *Hvac {
 
 	hvac.AddComponent("temp", components.Temperature, hvac.targetTemp)
 
-	hvac.onInput("temp-in", func(comp components.Component) { hvac.components["temp-in"].SetValue(comp.Value()) })
-	hvac.onInput("power-in", func(comp components.Component) { hvac.components["power-in"].SetValue(comp.Value()) })
+	hvac.onInput("temp-in", func(port *InputPort) { hvac.components["temp-in"].SetValue(port.Input()) })
+	hvac.onInput("power-in", func(port *InputPort) { hvac.components["power-in"].SetValue(port.Input()) })
 
 	hvac.profiles["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
 

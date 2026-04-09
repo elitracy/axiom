@@ -19,10 +19,10 @@ func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
 
 }
 
-func (ws *WorldState) addConnection(output *subsystems.OutputPort, input *subsystems.InputPort, throughput utils.Unit) error {
-	connection := connections.NewConnection(output, input, throughput)
+func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, throughput utils.Unit) error {
+	connection := connections.NewConnection(src, dest, throughput)
 
-	ws.connections[output.Subsystem().ID()] = append(ws.connections[output.Subsystem().ID()], connection)
+	ws.connections[dest.Subsystem().ID()] = append(ws.connections[dest.Subsystem().ID()], connection)
 
 	return nil
 }
@@ -54,12 +54,12 @@ func (ws *WorldState) Init() {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(reactor.OutputPorts()["valve-1"], acUnit.InputPorts()["valve-1"], 0.5)
+	err = ws.addConnection(reactor.OutputPorts()["valve-2"], acUnit.InputPorts()["valve-1"], 0.5)
 	if err != nil {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-2"], 1)
+	err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-1"], 1)
 	if err != nil {
 		logging.Error(err.Error())
 	}

@@ -59,10 +59,10 @@ func (ws *WorldState) Init() {
 		logging.Error(err.Error())
 	}
 
-	err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-1"], 1)
-	if err != nil {
-		logging.Error(err.Error())
-	}
+	// err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-1"], 1)
+	// if err != nil {
+	// 	logging.Error(err.Error())
+	// }
 }
 
 func (ws *WorldState) Update(tick *engine.Tick) {

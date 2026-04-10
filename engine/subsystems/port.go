@@ -54,7 +54,7 @@ func newCorePort(name string, subsystem Subsystem, component *components.Compone
 
 type InputPort struct {
 	*CorePort
-	input utils.Unit
+	input *utils.Unit
 }
 
 func NewInputPort(name string, subsystem Subsystem, component *components.Component) *InputPort {
@@ -63,8 +63,8 @@ func NewInputPort(name string, subsystem Subsystem, component *components.Compon
 	}
 }
 
-func (p InputPort) Input() utils.Unit          { return p.input }
-func (p *InputPort) SetInput(value utils.Unit) { p.input = value }
+func (p InputPort) Input() *utils.Unit         { return p.input }
+func (p *InputPort) SetInput(value utils.Unit) { *p.input = value }
 
 type OutputPort struct {
 	*CorePort

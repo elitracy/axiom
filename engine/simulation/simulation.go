@@ -1,94 +1,162 @@
 package simulation
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/config"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
-	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
 
 type WorldState struct {
-	subsystems  map[subsystems.SubsystemID]subsystems.Subsystem
+	subsystems  map[string]subsystems.Subsystem
 	connections map[subsystems.SubsystemID][]*connections.Connection
-	ports       map[connections.PortID]subsystems.SubsystemID
+}
+
+func (ws *WorldState) ValidateConfig(stationConfig config.StationConfig) []error {
+
+	tempSubsystems := make(map[string]subsystems.Subsystem)
+
+	var errors []error
+
+	if len(stationConfig.Errors) > 0 {
+		for _, err := range stationConfig.Errors {
+			errors = append(errors, fmt.Errorf("%s", err))
+		}
+	}
+
+	for name, systemType := range stationConfig.SubsystemDeclarations {
+		system, err := config.NewSubsystem(name, systemType)
+		if err != nil {
+			errors = append(errors, err)
+		}
+		tempSubsystems[name] = system
+	}
+
+	for _, setDir := range stationConfig.SetDirectives {
+		system, exists := tempSubsystems[setDir.System]
+
+		if !exists {
+			err := fmt.Errorf("subsystem %s does not exist", setDir.System)
+			errors = append(errors, err)
+		}
+
+		_, exists = system.Components()[setDir.Component]
+
+		if !exists {
+			err := fmt.Errorf("Component %s does not exist on system %s", setDir.Component, setDir.System)
+			errors = append(errors, err)
+		}
+
+		parsedFloat, err := strconv.ParseFloat(setDir.Value, 64)
+		if err != nil || parsedFloat < 0 || parsedFloat > 1 {
+			err := fmt.Errorf("Not a valid component value %s, must be [0-1]", setDir.Value)
+			errors = append(errors, err)
+		}
+	}
+
+	for _, connection := range stationConfig.ConnectionDeclarations {
+		srcSystem, exists := tempSubsystems[connection.SrcSystem]
+		if !exists {
+			err := fmt.Errorf("Source subsystem %s does not exist", connection.SrcSystem)
+			errors = append(errors, err)
+		}
+
+		_, exists = srcSystem.OutputPorts()[connection.SrcPort]
+		if !exists {
+			err := fmt.Errorf("Port %s does not exist on subsystem %s", connection.SrcPort, connection.SrcSystem)
+			errors = append(errors, err)
+		}
+
+		destSystem, exists := tempSubsystems[connection.DestSystem]
+		if !exists {
+			err := fmt.Errorf("Destination subsystem %s does not exist", connection.DestSystem)
+			errors = append(errors, err)
+		}
+
+		_, exists = destSystem.InputPorts()[connection.DestPort]
+		if !exists {
+			err := fmt.Errorf("Port %s does not exist on subsystem %s", connection.DestPort, connection.DestSystem)
+			errors = append(errors, err)
+		}
+
+		throughputFloat, err := strconv.ParseFloat(connection.Throughput, 64)
+		if err != nil || throughputFloat < 0 || throughputFloat > 1 {
+			err := fmt.Errorf("Not a valid throughput value %s, must be [0-1]", connection.Throughput)
+			errors = append(errors, err)
+		}
+
+	}
+
+	return errors
+}
+
+func (ws *WorldState) ApplyConfig(stationConfig config.StationConfig) {
+
+	for name, systemType := range stationConfig.SubsystemDeclarations {
+		if _, exists := ws.subsystems[name]; !exists {
+			system, _ := config.NewSubsystem(name, systemType)
+			ws.addSubsystem(system)
+		}
+	}
+
+	for _, setDir := range stationConfig.SetDirectives {
+		system := ws.subsystems[setDir.System]
+		comp := system.Components()[setDir.Component]
+		parsedFloat, _ := strconv.ParseFloat(setDir.Value, 64)
+
+		comp.SetValue(utils.Unit(parsedFloat))
+	}
+
+	for _, connection := range stationConfig.ConnectionDeclarations {
+		srcSystem := ws.subsystems[connection.SrcSystem]
+		srcPort := srcSystem.OutputPorts()[connection.SrcPort]
+
+		destSystem := ws.subsystems[connection.DestSystem]
+		destPort := destSystem.InputPorts()[connection.DestPort]
+
+		throughputFloat, _ := strconv.ParseFloat(connection.Throughput, 64)
+
+		ws.addConnection(srcPort, destPort, utils.Unit(throughputFloat))
+	}
+
 }
 
 func (ws *WorldState) addSubsystem(subsystem subsystems.Subsystem) {
-	ws.subsystems[subsystem.ID()] = subsystem
+	ws.subsystems[subsystem.Name()] = subsystem
 	ws.connections[subsystem.ID()] = []*connections.Connection{}
 
 }
 
-func (ws *WorldState) AddPort(name string, subsystemID subsystems.SubsystemID, component *components.Component) *connections.Port {
-	subsystem, exists := ws.subsystems[subsystemID]
-	if !exists {
-		return nil
-	}
-
-	if _, exists := subsystem.Components()[component.Name()]; !exists {
-		return nil
-	}
-
-	port := connections.NewPort(name, component)
-
-	ws.ports[port.ID()] = subsystemID
-
-	return port
-}
-
-func (ws *WorldState) addConnection(src *connections.Port, destID subsystems.SubsystemID, role string, throughput utils.Unit) {
-	connection := connections.NewConnection(src, destID, role, throughput)
-
-	_, exists := ws.ports[src.ID()]
-	if !exists {
-		return
-	}
-
-	ws.connections[destID] = append(ws.connections[destID], connection)
+func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, throughput utils.Unit) {
+	connection := connections.NewConnection(src, dest, throughput)
+	ws.connections[dest.Subsystem().ID()] = append(ws.connections[dest.Subsystem().ID()], connection)
 }
 
 func (ws *WorldState) Init() {
-
-	ws.subsystems = make(map[subsystems.SubsystemID]subsystems.Subsystem)
+	ws.subsystems = make(map[string]subsystems.Subsystem)
 	ws.connections = make(map[subsystems.SubsystemID][]*connections.Connection)
-	ws.ports = make(map[connections.PortID]subsystems.SubsystemID)
-
-	power := subsystems.NewPower(.5)
-	cooling := subsystems.NewCooling(.5)
-	hvac := subsystems.NewHvac()
-
-	ws.addSubsystem(power)
-	ws.addSubsystem(cooling)
-	ws.addSubsystem(hvac)
-
-	powerPort := ws.AddPort("socket-1", power.ID(), power.Components()["power"])
-	powerTemp := ws.AddPort("valve-1", power.ID(), power.Components()["temp"])
-	coolingTempPort := ws.AddPort("valve-1", cooling.ID(), cooling.Components()["temp"])
-	coolingFlowPort := ws.AddPort("valve-2", cooling.ID(), cooling.Components()["flow"])
-
-	ws.addConnection(powerPort, hvac.ID(), "power", .5)
-	ws.addConnection(powerTemp, hvac.ID(), "heat", .5)
-	ws.addConnection(coolingFlowPort, power.ID(), "cooling-rate", 1)
-	ws.addConnection(coolingTempPort, power.ID(), "cooling", 1)
 }
 
-// updates the world state
 func (ws *WorldState) Update(tick *engine.Tick) {
-
 	ws.updateSubsystems()
-	for systemID := range len(ws.subsystems) {
-		logging.Info(ws.subsystems[subsystems.SubsystemID(systemID)].String())
+
+	for name := range ws.subsystems {
+		logging.Info(ws.subsystems[name].String())
+		logging.Info("")
 	}
 }
 
-// iterates through the connection dependency tree for subsystems using DFS
 func (ws *WorldState) updateSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
 	depStack := utils.NewStack[subsystems.Subsystem]()
 
+	// DFS
 	for _, system := range ws.subsystems {
 		depStack.Push(system)
 		for depStack.Len() > 0 {
@@ -99,26 +167,28 @@ func (ws *WorldState) updateSubsystems() {
 
 			visited[subsystem.ID()] = struct{}{}
 			if len(ws.connections[subsystem.ID()]) <= 0 {
-				subsystem.Tick(nil)
+				subsystem.Tick()
 			}
 
 			for _, conn := range ws.connections[subsystem.ID()] {
-				srcID := ws.ports[conn.Src().ID()]
-				if _, seen := visited[srcID]; !seen {
-					subsystem := ws.subsystems[srcID]
+				src := conn.Src().Subsystem()
+				if _, seen := visited[src.ID()]; !seen {
+					subsystem := ws.subsystems[src.Name()]
 					depStack.Push(subsystem)
 
 				}
 			}
 		}
 
-		inputs := make(map[string]components.Component, 0)
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
-			srcComp.SetValue(srcComp.Value() * conn.Throughput())
-			inputs[conn.Role()] = srcComp
+
+			unit := new(utils.Unit)
+			*unit = srcComp.Value() * conn.Throughput()
+
+			conn.Dest().SetInput(unit)
 		}
-		system.Tick(inputs)
+		system.Tick()
 
 	}
 

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/elias/axiom/engine"
@@ -34,6 +35,7 @@ type logger struct {
 	queue    chan LogMessage
 	filepath string
 	tick     *engine.Tick
+	wg       sync.WaitGroup
 }
 
 func (l *logger) run() {
@@ -55,6 +57,7 @@ func (l *logger) run() {
 			log.Printf("%s %v %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, part, colorReset)
 		}
 	}
+	l.wg.Done()
 }
 
 func Init(filepath string, tick *engine.Tick) {
@@ -64,8 +67,14 @@ func Init(filepath string, tick *engine.Tick) {
 		tick:     tick,
 	}
 
+	l.wg.Add(1)
 	go l.run()
 	_logger = l
+}
+
+func Flush() {
+	close(_logger.queue)
+	_logger.wg.Wait()
 }
 
 func (l *logger) log(level, color, format string, args ...any) {

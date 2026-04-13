@@ -24,7 +24,6 @@ type Game interface {
 }
 
 func RunGame(game Game, startTick *Tick) {
-	game.Init()
 	for {
 		game.Update(startTick)
 		startTick.tick.Add(1)

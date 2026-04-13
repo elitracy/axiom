@@ -1,27 +1,36 @@
 package subsystems
 
 import (
+	"fmt"
+
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
 
 type Hvac struct {
 	*subsystemCore
-	targetTemp utils.Unit
 }
 
-func NewHvac() *Hvac {
+func NewHvac(name string, targetTemp utils.Unit) *Hvac {
 	hvac := &Hvac{
-		subsystemCore: newSubsystemCore("HVAC"),
-		targetTemp:    utils.Unit(.2),
+		subsystemCore: newSubsystemCore(name),
 	}
 
-	hvac.AddComponent("temp", components.Temperature, hvac.targetTemp)
+	hvac.AddComponent("temp", components.Temperature, targetTemp)
+	hvac.AddComponent("target-temp", components.Temperature, targetTemp)
 
 	hvac.onInput("temp-in", hvac.accumulateInput("temp-in", components.Temperature))
 	hvac.onInput("power-in", hvac.accumulateInput("power-in", components.Power))
 
 	hvac.profiles["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
+
+	for i := range 5 {
+		hvac.AddPort(fmt.Sprintf("socket-%d", i), "power-in", PortInput)
+	}
+
+	for i := range 5 {
+		hvac.AddPort(fmt.Sprintf("valve-%d", i), "temp-in", PortInput)
+	}
 
 	return hvac
 }
@@ -43,7 +52,7 @@ func (s *Hvac) Tick() {
 
 	net = max(0, tempVal-powerVal)
 
-	regulationDelta := s.profiles["temp-regulation"].Delta(currentTemp, s.targetTemp)
+	regulationDelta := s.profiles["temp-regulation"].Delta(currentTemp, s.Components()["target-temp"].Value())
 
 	s.components["temp"].AddValue(net + regulationDelta)
 

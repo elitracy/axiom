@@ -1,6 +1,8 @@
 package subsystems
 
 import (
+	"fmt"
+
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -9,9 +11,9 @@ type Power struct {
 	*subsystemCore
 }
 
-func NewPower(initPower utils.Unit) *Power {
+func NewPower(name string, initPower utils.Unit) *Power {
 	power := &Power{
-		subsystemCore: newSubsystemCore("Power"),
+		subsystemCore: newSubsystemCore(name),
 	}
 
 	power.AddComponent("power-out", components.Power, initPower)
@@ -21,6 +23,19 @@ func NewPower(initPower utils.Unit) *Power {
 
 	power.profiles["cooling"] = utils.NewThermalResponse(10, .05)
 	power.profiles["heating"] = utils.NewThermalResponse(10, .05)
+
+
+	for i := range 5 {
+		power.AddPort(fmt.Sprintf("socket-%d", i), "power-out", PortOutput)
+	}
+
+	for i := range 5 {
+		power.AddPort(fmt.Sprintf("valve-%d", i), "temp-out", PortOutput)
+	}
+
+	for i := range 5 {
+		power.AddPort(fmt.Sprintf("valve-%d", i+5), "temp-in", PortInput)
+	}
 
 	return power
 }

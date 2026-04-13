@@ -1,6 +1,8 @@
 package subsystems
 
 import (
+	"fmt"
+
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -14,8 +16,8 @@ var (
 type PortType int
 
 const (
-	Input PortType = iota
-	Output
+	PortInput PortType = iota
+	PortOutput
 )
 
 func newPortID() PortID {
@@ -28,12 +30,12 @@ type Port interface {
 	ID() PortID
 	Name() string
 	Subsystem() Subsystem
+	String() string
 }
 
 type CorePort struct {
 	id        PortID
 	name      string
-	component *components.Component
 	subsystem Subsystem
 }
 
@@ -45,7 +47,6 @@ func newCorePort(name string, subsystem Subsystem, component *components.Compone
 	return &CorePort{
 		id:        newPortID(),
 		name:      name,
-		component: component,
 		subsystem: subsystem,
 	}
 }
@@ -54,6 +55,10 @@ type InputPort struct {
 	*CorePort
 	input     *utils.Unit
 	component string
+}
+
+func (p InputPort) String() string {
+	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component)
 }
 
 func NewInputPort(name string, subsystem Subsystem, component string) *InputPort {
@@ -68,11 +73,17 @@ func (p *InputPort) SetInput(value *utils.Unit) { p.input = value }
 
 type OutputPort struct {
 	*CorePort
+	component *components.Component
+}
+
+func (p OutputPort) String() string {
+	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component.Name())
 }
 
 func NewOutputPort(name string, subsystem Subsystem, component *components.Component) *OutputPort {
 	return &OutputPort{
-		CorePort: newCorePort(name, subsystem, component),
+		CorePort:  newCorePort(name, subsystem, component),
+		component: component,
 	}
 }
 

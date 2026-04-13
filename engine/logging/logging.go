@@ -39,7 +39,6 @@ type logger struct {
 }
 
 func (l *logger) run() {
-	l.wg.Add(1)
 	log.SetOutput(
 		&lumberjack.Logger{
 			Filename:   l.filepath,
@@ -68,6 +67,7 @@ func Init(filepath string, tick *engine.Tick) {
 		tick:     tick,
 	}
 
+	l.wg.Add(1)
 	go l.run()
 	_logger = l
 }

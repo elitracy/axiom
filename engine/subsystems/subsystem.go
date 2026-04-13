@@ -93,15 +93,14 @@ func (s *subsystemCore) AddInputComponent(name string, componentType components.
 
 func (s *subsystemCore) AddPort(name string, component string, portType PortType) error {
 	switch portType {
-	case Input:
+	case PortInput:
 		if _, exists := s.inputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
 		port := NewInputPort(name, s, component)
 		s.inputPorts[name] = port
-
-	case Output:
+	case PortOutput:
 
 		if _, exists := s.components[component]; !exists {
 			return fmt.Errorf("Could not add output port, component %v doesn't exist on %v", component, s.Name())

@@ -59,10 +59,10 @@ func (ws *WorldState) Init() {
 		logging.Error(err.Error())
 	}
 
-	// err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-1"], 1)
-	// if err != nil {
-	// 	logging.Error(err.Error())
-	// }
+	err = ws.addConnection(cooler.OutputPorts()["valve-1"], reactor.InputPorts()["valve-1"], 1)
+	if err != nil {
+		logging.Error(err.Error())
+	}
 }
 
 func (ws *WorldState) Update(tick *engine.Tick) {
@@ -104,7 +104,11 @@ func (ws *WorldState) updateSubsystems() {
 
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
-			conn.Dest().SetInput(srcComp.Value() * conn.Throughput())
+
+			unit := new(utils.Unit)
+			*unit = srcComp.Value() * conn.Throughput()
+
+			conn.Dest().SetInput(unit)
 		}
 		system.Tick()
 

@@ -27,7 +27,6 @@ func newPortID() PortID {
 type Port interface {
 	ID() PortID
 	Name() string
-	Component() *components.Component
 	Subsystem() Subsystem
 }
 
@@ -38,10 +37,9 @@ type CorePort struct {
 	subsystem Subsystem
 }
 
-func (p CorePort) ID() PortID                       { return p.id }
-func (p CorePort) Name() string                     { return p.name }
-func (p CorePort) Component() *components.Component { return p.component }
-func (p CorePort) Subsystem() Subsystem             { return p.subsystem }
+func (p CorePort) ID() PortID           { return p.id }
+func (p CorePort) Name() string         { return p.name }
+func (p CorePort) Subsystem() Subsystem { return p.subsystem }
 
 func newCorePort(name string, subsystem Subsystem, component *components.Component) *CorePort {
 	return &CorePort{
@@ -54,17 +52,19 @@ func newCorePort(name string, subsystem Subsystem, component *components.Compone
 
 type InputPort struct {
 	*CorePort
-	input *utils.Unit
+	input     *utils.Unit
+	component string
 }
 
-func NewInputPort(name string, subsystem Subsystem, component *components.Component) *InputPort {
+func NewInputPort(name string, subsystem Subsystem, component string) *InputPort {
 	return &InputPort{
-		CorePort: newCorePort(name, subsystem, component),
+		CorePort:  newCorePort(name, subsystem, nil),
+		component: component,
 	}
 }
 
-func (p InputPort) Input() *utils.Unit         { return p.input }
-func (p *InputPort) SetInput(value utils.Unit) { *p.input = value }
+func (p InputPort) Input() *utils.Unit          { return p.input }
+func (p *InputPort) SetInput(value *utils.Unit) { p.input = value }
 
 type OutputPort struct {
 	*CorePort
@@ -75,3 +75,5 @@ func NewOutputPort(name string, subsystem Subsystem, component *components.Compo
 		CorePort: newCorePort(name, subsystem, component),
 	}
 }
+
+func (p *OutputPort) Component() *components.Component { return p.component }

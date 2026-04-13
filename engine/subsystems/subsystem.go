@@ -33,28 +33,31 @@ type Subsystem interface {
 	Tick()
 	onInput(name string, handler inputHandler)
 	dispatchInputs()
+	InputComponents() map[string]*components.Component
 }
 
 type subsystemCore struct {
 	Subsystem
-	id            SubsystemID
-	name          string
-	components    map[string]*components.Component
-	inputHandlers map[string]inputHandler
-	profiles      map[string]utils.ThermalResponse
-	inputPorts    map[string]*InputPort
-	outputPorts   map[string]*OutputPort
+	id              SubsystemID
+	name            string
+	components      map[string]*components.Component
+	inputHandlers   map[string]inputHandler
+	inputComponents map[string]*components.Component
+	profiles        map[string]utils.ThermalResponse
+	inputPorts      map[string]*InputPort
+	outputPorts     map[string]*OutputPort
 }
 
 func newSubsystemCore(name string) *subsystemCore {
 	return &subsystemCore{
-		id:            newID(),
-		name:          name,
-		components:    make(map[string]*components.Component),
-		inputHandlers: make(map[string]inputHandler),
-		profiles:      make(map[string]utils.ThermalResponse),
-		inputPorts:    make(map[string]*InputPort),
-		outputPorts:   make(map[string]*OutputPort),
+		id:              newID(),
+		name:            name,
+		components:      make(map[string]*components.Component),
+		inputHandlers:   make(map[string]inputHandler),
+		inputComponents: make(map[string]*components.Component),
+		profiles:        make(map[string]utils.ThermalResponse),
+		inputPorts:      make(map[string]*InputPort),
+		outputPorts:     make(map[string]*OutputPort),
 	}
 }
 
@@ -77,25 +80,37 @@ func (s *subsystemCore) AddComponent(name string, componentType components.Compo
 	return nil
 }
 
-func (s *subsystemCore) AddPort(name string, componentName string, portType PortType) error {
-	if _, exists := s.components[componentName]; !exists {
-		return fmt.Errorf("Could not add port, component %v doesn't exist on %v", componentName, s.Name())
+func (s *subsystemCore) AddInputComponent(name string, componentType components.ComponentType, value utils.Unit) error {
+	if _, exists := s.inputComponents[name]; exists {
+		return fmt.Errorf("Could not add input component, input component %v already exists on %v", name, s.Name())
 	}
+
+	component := components.NewComponent(name, componentType, value)
+	s.inputComponents[component.Name()] = component
+
+	return nil
+}
+
+func (s *subsystemCore) AddPort(name string, component string, portType PortType) error {
 	switch portType {
 	case Input:
 		if _, exists := s.inputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewInputPort(name, s, s.Components()[componentName])
+		port := NewInputPort(name, s, component)
 		s.inputPorts[name] = port
 
 	case Output:
+
+		if _, exists := s.components[component]; !exists {
+			return fmt.Errorf("Could not add output port, component %v doesn't exist on %v", component, s.Name())
+		}
 		if _, exists := s.outputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, output port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewOutputPort(name, s, s.Components()[componentName])
+		port := NewOutputPort(name, s, s.Components()[component])
 		s.outputPorts[name] = port
 	}
 
@@ -119,8 +134,27 @@ func (s *subsystemCore) onInput(name string, handler inputHandler) {
 
 func (s subsystemCore) dispatchInputs() {
 	for _, port := range s.inputPorts {
-		if handler, exists := s.inputHandlers[port.Component().Name()]; exists {
+		if handler, exists := s.inputHandlers[port.component]; exists {
 			handler(port)
 		}
+
+		port.SetInput(nil)
+	}
+}
+
+func (s subsystemCore) InputComponents() map[string]*components.Component { return s.inputComponents }
+
+func (s subsystemCore) accumulateInput(name string, componentType components.ComponentType) inputHandler {
+	return func(port *InputPort) {
+
+		if port.Input() == nil {
+			return
+		}
+
+		if _, exists := s.inputComponents[name]; !exists {
+			s.AddInputComponent(name, componentType, 0)
+		}
+
+		s.inputComponents[name].AddValue(*port.Input())
 	}
 }

@@ -19,9 +19,9 @@ func (ws *WorldState) updateSubsystems() {
 
 	depStack := utils.NewStack[subsystems.Subsystem]()
 
-	// DFS
 	for _, system := range ws.subsystems {
 		depStack.Push(system)
+
 		for depStack.Len() > 0 {
 			subsystem := depStack.Pop()
 			if _, seen := visited[subsystem.ID()]; seen {
@@ -29,9 +29,6 @@ func (ws *WorldState) updateSubsystems() {
 			}
 
 			visited[subsystem.ID()] = struct{}{}
-			if len(ws.connections[subsystem.ID()]) <= 0 {
-				subsystem.Tick()
-			}
 
 			for _, conn := range ws.connections[subsystem.ID()] {
 				src := conn.Src().Subsystem()

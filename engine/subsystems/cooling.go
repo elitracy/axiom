@@ -11,10 +11,10 @@ type Cooling struct {
 	*subsystemCore
 }
 
-func NewCooling(name string, initTemp utils.Unit) *Cooling {
+func NewCooling(id SubsystemID, name string, initTemp utils.Unit) *Cooling {
 
 	cooling := &Cooling{
-		subsystemCore: newSubsystemCore(name),
+		subsystemCore: newSubsystemCore(id, name),
 	}
 
 	cooling.AddComponent("temp-out", components.Temperature, initTemp)
@@ -25,7 +25,5 @@ func NewCooling(name string, initTemp utils.Unit) *Cooling {
 
 	return cooling
 }
-
-func (s *Cooling) Effort() utils.Unit { return 1 }
 
 func (s *Cooling) Tick() {}

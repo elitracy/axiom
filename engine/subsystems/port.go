@@ -9,29 +9,12 @@ import (
 
 type PortID int64
 
-var (
-	currentPortID = 0
-)
-
 type PortType int
 
 const (
 	PortInput PortType = iota
 	PortOutput
 )
-
-func newPortID() PortID {
-	id := currentPortID
-	currentPortID++
-	return PortID(id)
-}
-
-type Port interface {
-	ID() PortID
-	Name() string
-	Subsystem() Subsystem
-	String() string
-}
 
 type CorePort struct {
 	id        PortID
@@ -43,16 +26,16 @@ func (p CorePort) ID() PortID           { return p.id }
 func (p CorePort) Name() string         { return p.name }
 func (p CorePort) Subsystem() Subsystem { return p.subsystem }
 
-func newCorePort(name string, subsystem Subsystem, component *components.Component) *CorePort {
-	return &CorePort{
-		id:        newPortID(),
+func newCorePort(id PortID, name string, subsystem Subsystem) CorePort {
+	return CorePort{
+		id:        id,
 		name:      name,
 		subsystem: subsystem,
 	}
 }
 
 type InputPort struct {
-	*CorePort
+	CorePort
 	value    utils.Unit
 	channel  string
 	received bool
@@ -62,9 +45,9 @@ func (p InputPort) String() string {
 	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.channel)
 }
 
-func NewInputPort(name string, subsystem Subsystem, channel string) *InputPort {
+func newInputPort(id PortID, name string, subsystem Subsystem, channel string) *InputPort {
 	return &InputPort{
-		CorePort: newCorePort(name, subsystem, nil),
+		CorePort: newCorePort(id, name, subsystem),
 		channel:  channel,
 	}
 }
@@ -80,7 +63,7 @@ func (p *InputPort) SetValue(value utils.Unit) {
 }
 
 type OutputPort struct {
-	*CorePort
+	CorePort
 	component *components.Component
 }
 
@@ -88,9 +71,9 @@ func (p OutputPort) String() string {
 	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component.Name())
 }
 
-func NewOutputPort(name string, subsystem Subsystem, component *components.Component) *OutputPort {
+func newOutputPort(id PortID, name string, subsystem Subsystem, component *components.Component) *OutputPort {
 	return &OutputPort{
-		CorePort:  newCorePort(name, subsystem, component),
+		CorePort:  newCorePort(id, name, subsystem),
 		component: component,
 	}
 }

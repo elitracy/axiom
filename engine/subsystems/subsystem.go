@@ -7,58 +7,42 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-var currentSubsystemID = 0
-
-func newID() SubsystemID {
-	id := currentSubsystemID
-	currentSubsystemID++
-	return SubsystemID(id)
-}
-
 type SubsystemID int64
 
-type inputHandler func(port *InputPort)
-
 type Subsystem interface {
-	ID() SubsystemID
-	Name() string
-	Effort() utils.Unit
-	Components() map[string]*components.Component
-	InputPorts() map[string]*InputPort
-	OutputPorts() map[string]*OutputPort
-	AddComponent(string, components.ComponentType, utils.Unit) error
 	AddPort(string, string, PortType) error
 	String() string
 
 	Tick()
-	onInput(name string, handler inputHandler)
-	dispatchInputs()
-	InputComponents() map[string]*components.Component
 }
 
 type subsystemCore struct {
-	Subsystem
-	id              SubsystemID
-	name            string
-	components      map[string]*components.Component
-	inputHandlers   map[string]inputHandler
-	inputComponents map[string]*components.Component
-	profiles        map[string]utils.ThermalResponse
-	inputPorts      map[string]*InputPort
-	outputPorts     map[string]*OutputPort
+	id               SubsystemID
+	name             string
+	components       map[string]*components.Component
+	inputComponents  map[string]*components.Component
+	thermalResponses map[string]utils.ThermalResponse
+	inputPorts       map[string]*InputPort
+	outputPorts      map[string]*OutputPort
+	currentPortID    PortID
 }
 
-func newSubsystemCore(name string) *subsystemCore {
+func newSubsystemCore(id SubsystemID, name string) *subsystemCore {
 	return &subsystemCore{
-		id:              newID(),
-		name:            name,
-		components:      make(map[string]*components.Component),
-		inputHandlers:   make(map[string]inputHandler),
-		inputComponents: make(map[string]*components.Component),
-		profiles:        make(map[string]utils.ThermalResponse),
-		inputPorts:      make(map[string]*InputPort),
-		outputPorts:     make(map[string]*OutputPort),
+		id:               id,
+		name:             name,
+		components:       make(map[string]*components.Component),
+		inputComponents:  make(map[string]*components.Component),
+		thermalResponses: make(map[string]utils.ThermalResponse),
+		inputPorts:       make(map[string]*InputPort),
+		outputPorts:      make(map[string]*OutputPort),
 	}
+}
+
+func (s *subsystemCore) newPortID() PortID {
+	id := s.currentPortID
+	s.currentPortID++
+	return PortID(id)
 }
 
 func (s *subsystemCore) ID() SubsystemID { return s.id }
@@ -92,13 +76,16 @@ func (s *subsystemCore) AddInputComponent(name string, componentType components.
 }
 
 func (s *subsystemCore) AddPort(name string, component string, portType PortType) error {
+
+	id := s.newPortID()
+
 	switch portType {
 	case PortInput:
 		if _, exists := s.inputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewInputPort(name, s, component)
+		port := newInputPort(id, name, s, component)
 		s.inputPorts[name] = port
 	case PortOutput:
 
@@ -109,7 +96,7 @@ func (s *subsystemCore) AddPort(name string, component string, portType PortType
 			return fmt.Errorf("Could not add port, output port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewOutputPort(name, s, s.Components()[component])
+		port := newOutputPort(id, name, s, s.Components()[component])
 		s.outputPorts[name] = port
 	}
 
@@ -126,12 +113,6 @@ func (s subsystemCore) String() string {
 
 	return output
 }
-
-func (s *subsystemCore) onInput(name string, handler inputHandler) {
-	s.inputHandlers[name] = handler
-}
-
-func (s subsystemCore) InputComponents() map[string]*components.Component { return s.inputComponents }
 
 func (s *subsystemCore) InputSum(channel string) (utils.Unit, bool) {
 	var sum utils.Unit

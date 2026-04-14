@@ -12,15 +12,15 @@ type Hvac struct {
 	*subsystemCore
 }
 
-func NewHvac(name string, targetTemp utils.Unit) *Hvac {
+func NewHvac(id SubsystemID, name string, targetTemp utils.Unit) *Hvac {
 	hvac := &Hvac{
-		subsystemCore: newSubsystemCore(name),
+		subsystemCore: newSubsystemCore(id, name),
 	}
 
 	hvac.AddComponent("temp", components.Temperature, targetTemp)
 	hvac.AddComponent("target-temp", components.Temperature, targetTemp)
 
-	hvac.profiles["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
+	hvac.thermalResponses["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
 
 	for i := range 5 {
 		hvac.AddPort(fmt.Sprintf("socket-%d", i), "power-in", PortInput)
@@ -33,8 +33,6 @@ func NewHvac(name string, targetTemp utils.Unit) *Hvac {
 	return hvac
 }
 
-func (s *Hvac) Effort() utils.Unit { return s.components["temp"].Value() }
-
 func (s *Hvac) Tick() {
 	currentTemp := s.components["temp"].Value()
 
@@ -46,7 +44,7 @@ func (s *Hvac) Tick() {
 	logging.Debug("POWER IN: %v", powerIn)
 	logging.Debug("NET: %v", net)
 
-	regulationDelta := s.profiles["temp-regulation"].Delta(currentTemp, s.Components()["target-temp"].Value())
+	regulationDelta := s.thermalResponses["temp-regulation"].Delta(currentTemp, s.Components()["target-temp"].Value())
 
 	s.components["temp"].AddValue(net + regulationDelta)
 

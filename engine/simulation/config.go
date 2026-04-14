@@ -12,6 +12,7 @@ import (
 func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error {
 
 	tempSubsystems := make(map[string]subsystems.Subsystem)
+	var subsystemID subsystems.SubsystemID
 
 	var errors []error
 
@@ -22,12 +23,14 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 	}
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
-		system, err := parser.NewSubsystem(name, systemType)
+		subsystem, err := ws.newSubsystem(subsystemID, name, systemType)
+		subsystemID++
+
 		if err != nil {
 			errors = append(errors, err)
 			continue
 		}
-		tempSubsystems[name] = system
+		tempSubsystems[name] = subsystem
 	}
 
 	for _, setDir := range stationConfig.SetDirectives {
@@ -96,19 +99,24 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 	return errors
 }
 
-func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) {
+func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) error {
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
 		if _, exists := ws.subsystems[name]; !exists {
-			system, _ := parser.NewSubsystem(name, systemType)
-			ws.addSubsystem(system)
+			err := ws.addSubsystem(name, systemType)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	for _, setDir := range stationConfig.SetDirectives {
 		system := ws.subsystems[setDir.System]
 		comp := system.Components()[setDir.Component]
-		parsedFloat, _ := strconv.ParseFloat(setDir.Value, 64)
+		parsedFloat, err := strconv.ParseFloat(setDir.Value, 64)
+		if err != nil {
+			return err
+		}
 
 		comp.SetValue(utils.Unit(parsedFloat))
 	}
@@ -120,9 +128,13 @@ func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) {
 		destSystem := ws.subsystems[connection.DestSystem]
 		destPort := destSystem.InputPorts()[connection.DestPort]
 
-		throughputFloat, _ := strconv.ParseFloat(connection.Throughput, 64)
+		throughputFloat, err := strconv.ParseFloat(connection.Throughput, 64)
+		if err != nil {
+			return err
+		}
 
 		ws.addConnection(srcPort, destPort, utils.Unit(throughputFloat))
 	}
 
+	return nil
 }

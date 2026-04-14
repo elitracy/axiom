@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/elias/axiom/engine/config"
+	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (ws *WorldState) ValidateConfig(stationConfig config.StationConfig) []error {
+func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error {
 
 	tempSubsystems := make(map[string]subsystems.Subsystem)
 
@@ -22,7 +22,7 @@ func (ws *WorldState) ValidateConfig(stationConfig config.StationConfig) []error
 	}
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
-		system, err := config.NewSubsystem(name, systemType)
+		system, err := parser.NewSubsystem(name, systemType)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -87,11 +87,11 @@ func (ws *WorldState) ValidateConfig(stationConfig config.StationConfig) []error
 	return errors
 }
 
-func (ws *WorldState) ApplyConfig(stationConfig config.StationConfig) {
+func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) {
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
 		if _, exists := ws.subsystems[name]; !exists {
-			system, _ := config.NewSubsystem(name, systemType)
+			system, _ := parser.NewSubsystem(name, systemType)
 			ws.addSubsystem(system)
 		}
 	}

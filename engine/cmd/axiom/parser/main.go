@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/elias/axiom/engine"
-	"github.com/elias/axiom/engine/config"
 	"github.com/elias/axiom/engine/logging"
+	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/simulation"
 )
 
@@ -15,10 +15,16 @@ func main() {
 	args := os.Args[1:]
 	path := args[0]
 
-	stationConfig := config.NewStationConfig()
-	parser := config.NewParser(stationConfig)
-	parser.ReadFile(path)
-	logging.Info("LEN: %v", len(parser.Config.SubsystemDeclarations))
+	stationConfig := parser.NewParserConfig()
+	parser := parser.NewParser(stationConfig)
+	content, err := parser.ReadFile(path)
+	if err != nil {
+		logging.Error(err.Error())
+		logging.Flush()
+		return
+	}
+
+	parser.Parse(content)
 
 	world := &simulation.WorldState{}
 	world.Init()

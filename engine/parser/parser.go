@@ -1,4 +1,4 @@
-package config
+package parser
 
 import (
 	"fmt"
@@ -33,12 +33,12 @@ func newParseError(line int, msg string) parseError {
 }
 
 type Parser struct {
-	Config StationConfig
+	Config ParserConfig
 	tokens []token
 	errors []parseError
 }
 
-func NewParser(config StationConfig) Parser {
+func NewParser(config ParserConfig) Parser {
 	return Parser{
 		Config: config,
 	}

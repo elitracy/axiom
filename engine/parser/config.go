@@ -1,4 +1,4 @@
-package config
+package parser
 
 import (
 	"fmt"
@@ -20,15 +20,15 @@ type connectionDeclaration struct {
 	Throughput string
 }
 
-type StationConfig struct {
+type ParserConfig struct {
 	SubsystemDeclarations  map[string]string
 	SetDirectives          []setDirective
 	ConnectionDeclarations []connectionDeclaration
 	Errors                 []parseError
 }
 
-func NewStationConfig() StationConfig {
-	return StationConfig{
+func NewParserConfig() ParserConfig {
+	return ParserConfig{
 		SubsystemDeclarations: make(map[string]string),
 	}
 }

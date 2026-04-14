@@ -1,4 +1,4 @@
-package config
+package parser
 
 import (
 	"fmt"
@@ -33,23 +33,19 @@ func newParseError(line int, msg string) parseError {
 }
 
 type Parser struct {
-	Config StationConfig
+	Config ParserConfig
 	tokens []token
 	errors []parseError
 }
 
-func NewParser(config StationConfig) Parser {
+func NewParser(config ParserConfig) Parser {
 	return Parser{
 		Config: config,
 	}
 }
 
-func (p *Parser) ReadFile(path string) error {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("Could not read file: %s", path)
-	}
-	lines := strings.Split(string(file), "\n")
+func (p *Parser) Parse(content []byte) error {
+	lines := strings.Split(string(content), "\n")
 
 	for row, line := range lines {
 		tokens := strings.Fields(line)
@@ -119,4 +115,14 @@ func (p *Parser) ReadFile(path string) error {
 	}
 
 	return nil
+
+}
+
+func (p *Parser) ReadFile(path string) ([]byte, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read file: %s", path)
+	}
+	return file, nil
+
 }

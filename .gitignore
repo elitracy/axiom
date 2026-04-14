@@ -1,6 +1,7 @@
 # Rust build artifacts
 engine/target/
 **/logs/*.log
+**/tmp/
 
 # OS files
 .DS_Store

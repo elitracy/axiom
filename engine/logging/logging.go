@@ -51,10 +51,10 @@ func (l *logger) run() {
 	log.SetFlags(0)
 
 	for msg := range l.queue {
-		timeTick := fmt.Sprintf("%s%s%s", colorGrey, msg.Time.Format("15:04:05.000"), colorReset)
+		timeTick := fmt.Sprintf("%s%s", colorGrey, msg.Time.Format("15:04:05.000"))
 		parts := strings.Split(msg.Message, "\n")
 		for _, part := range parts {
-			log.Printf("%s %v %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, part, colorReset)
+			log.Printf("%s %d %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, part, colorReset)
 		}
 	}
 	l.wg.Done()
@@ -97,15 +97,8 @@ func (l *logger) log(level, color, format string, args ...any) {
 
 var _logger *logger
 
-func Info(format string, args ...any) {
-	_logger.log("TELEMETRY", colorReset, format, args...)
-}
-func Error(format string, args ...any) {
-	_logger.log("FAULT", colorRed, format, args...)
-}
-func Warn(format string, args ...any) {
-	_logger.log("WARN", colorYellow, format, args...)
-}
-func Ok(format string, args ...any) {
-	_logger.log("STABLE", colorGreen, format, args...)
-}
+func Info(format string, args ...any)  { _logger.log("TELEMETRY", colorGrey, format, args...) }
+func Debug(format string, args ...any) { _logger.log("TELEMETRY", colorReset, format, args...) }
+func Error(format string, args ...any) { _logger.log("FAULT", colorRed, format, args...) }
+func Warn(format string, args ...any)  { _logger.log("WARN", colorYellow, format, args...) }
+func Ok(format string, args ...any)    { _logger.log("STABLE", colorGreen, format, args...) }

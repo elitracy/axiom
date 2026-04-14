@@ -121,7 +121,7 @@ func (s subsystemCore) String() string {
 	output := fmt.Sprintf("%s[%d]", s.name, s.id)
 
 	for _, comp := range s.components {
-		output += fmt.Sprintf("\n%v[%s]: %.2f", comp.Type(), comp.Name(), comp.Value())
+		output += fmt.Sprintf("\n%s[%s]: %.2f", comp.Name(), comp.Type(), comp.Value())
 	}
 
 	return output
@@ -131,29 +131,19 @@ func (s *subsystemCore) onInput(name string, handler inputHandler) {
 	s.inputHandlers[name] = handler
 }
 
-func (s subsystemCore) dispatchInputs() {
-	for _, port := range s.inputPorts {
-		if handler, exists := s.inputHandlers[port.component]; exists {
-			handler(port)
-		}
-
-		port.SetInput(nil)
-	}
-}
-
 func (s subsystemCore) InputComponents() map[string]*components.Component { return s.inputComponents }
 
-func (s subsystemCore) accumulateInput(name string, componentType components.ComponentType) inputHandler {
-	return func(port *InputPort) {
+func (s *subsystemCore) InputSum(channel string) (utils.Unit, bool) {
+	var sum utils.Unit
+	got := false
 
-		if port.Input() == nil {
-			return
+	for _, p := range s.inputPorts {
+		if p.channel == channel && p.received {
+			got = true
+			sum += p.value
+			p.Clear()
 		}
-
-		if _, exists := s.inputComponents[name]; !exists {
-			s.AddInputComponent(name, componentType, 0)
-		}
-
-		s.inputComponents[name].AddValue(*port.Input())
 	}
+
+	return sum, got
 }

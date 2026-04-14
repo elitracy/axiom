@@ -45,11 +45,7 @@ func (ws *WorldState) updateSubsystems() {
 
 		for _, conn := range ws.connections[system.ID()] {
 			srcComp := *conn.Src().Component()
-
-			unit := new(utils.Unit)
-			*unit = srcComp.Value() * conn.Throughput()
-
-			conn.Dest().SetInput(unit)
+			conn.Dest().SetValue(srcComp.Value() * conn.Throughput())
 		}
 		system.Tick()
 

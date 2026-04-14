@@ -53,23 +53,31 @@ func newCorePort(name string, subsystem Subsystem, component *components.Compone
 
 type InputPort struct {
 	*CorePort
-	input     *utils.Unit
-	component string
+	value    utils.Unit
+	channel  string
+	received bool
 }
 
 func (p InputPort) String() string {
-	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component)
+	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.channel)
 }
 
-func NewInputPort(name string, subsystem Subsystem, component string) *InputPort {
+func NewInputPort(name string, subsystem Subsystem, channel string) *InputPort {
 	return &InputPort{
-		CorePort:  newCorePort(name, subsystem, nil),
-		component: component,
+		CorePort: newCorePort(name, subsystem, nil),
+		channel:  channel,
 	}
 }
 
-func (p InputPort) Input() *utils.Unit          { return p.input }
-func (p *InputPort) SetInput(value *utils.Unit) { p.input = value }
+func (p *InputPort) Clear() {
+	p.value = 0
+	p.received = false
+}
+
+func (p *InputPort) SetValue(value utils.Unit) {
+	p.value = value
+	p.received = true
+}
 
 type OutputPort struct {
 	*CorePort

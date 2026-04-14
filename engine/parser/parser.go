@@ -12,6 +12,7 @@ const (
 	keyConnect = "connect"
 	keyType    = "type"
 	keyArrow   = "->"
+	keyComment = "//"
 )
 
 type token struct {
@@ -28,6 +29,10 @@ type parseError struct {
 	msg  string
 }
 
+func (e parseError) String() string {
+	return fmt.Sprintf("line %d: %s", e.line, e.msg)
+}
+
 func newParseError(line int, msg string) parseError {
 	return parseError{line, msg}
 }
@@ -35,7 +40,6 @@ func newParseError(line int, msg string) parseError {
 type Parser struct {
 	Config ParserConfig
 	tokens []token
-	errors []parseError
 }
 
 func NewParser(config ParserConfig) Parser {
@@ -45,6 +49,8 @@ func NewParser(config ParserConfig) Parser {
 }
 
 func (p *Parser) Parse(content []byte) error {
+	var errors []parseError
+
 	lines := strings.Split(string(content), "\n")
 
 	for row, line := range lines {
@@ -54,9 +60,11 @@ func (p *Parser) Parse(content []byte) error {
 		}
 
 		switch tokens[0] {
+		case keyComment:
+			continue
 		case keySystem:
 			if len(tokens) != 3 {
-				p.errors = append(p.errors, newParseError(row, "invalid system declaration"))
+				errors = append(errors, newParseError(row, "invalid system declaration"))
 				continue
 			}
 
@@ -69,7 +77,7 @@ func (p *Parser) Parse(content []byte) error {
 
 		case keySet:
 			if len(tokens) != 3 {
-				p.errors = append(p.errors, newParseError(row, "invalid set directive"))
+				errors = append(errors, newParseError(row, "invalid set directive"))
 				continue
 			}
 
@@ -88,7 +96,7 @@ func (p *Parser) Parse(content []byte) error {
 
 		case keyConnect:
 			if len(tokens) != 5 {
-				p.errors = append(p.errors, newParseError(row, "invalid connection declaration"))
+				errors = append(errors, newParseError(row, "invalid connection declaration"))
 				continue
 			}
 
@@ -111,9 +119,13 @@ func (p *Parser) Parse(content []byte) error {
 			}
 
 			p.Config.ConnectionDeclarations = append(p.Config.ConnectionDeclarations, connection)
+		default:
+			error := fmt.Sprintf("Unknown symbol: %v", tokens[0])
+			errors = append(errors, newParseError(row, error))
 		}
 	}
 
+	p.Config.Errors = errors
 	return nil
 
 }

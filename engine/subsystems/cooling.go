@@ -11,13 +11,13 @@ type Cooling struct {
 	*subsystemCore
 }
 
-func NewCooling(name string, initEffort utils.Unit) *Cooling {
+func NewCooling(name string, initTemp utils.Unit) *Cooling {
 
 	cooling := &Cooling{
 		subsystemCore: newSubsystemCore(name),
 	}
 
-	cooling.AddComponent("temp-out", components.Temperature, 0.5)
+	cooling.AddComponent("temp-out", components.Temperature, initTemp)
 
 	for i := range 5 {
 		cooling.AddPort(fmt.Sprintf("valve-%d", i), "temp-out", PortOutput)

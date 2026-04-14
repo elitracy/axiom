@@ -25,6 +25,7 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 		system, err := parser.NewSubsystem(name, systemType)
 		if err != nil {
 			errors = append(errors, err)
+			continue
 		}
 		tempSubsystems[name] = system
 	}
@@ -35,6 +36,7 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 		if !exists {
 			err := fmt.Errorf("subsystem %s does not exist", setDir.System)
 			errors = append(errors, err)
+			continue
 		}
 
 		_, exists = system.Components()[setDir.Component]
@@ -42,12 +44,14 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 		if !exists {
 			err := fmt.Errorf("Component %s does not exist on system %s", setDir.Component, setDir.System)
 			errors = append(errors, err)
+			continue
 		}
 
 		parsedFloat, err := strconv.ParseFloat(setDir.Value, 64)
 		if err != nil || parsedFloat < 0 || parsedFloat > 1 {
 			err := fmt.Errorf("Not a valid component value %s, must be [0-1]", setDir.Value)
 			errors = append(errors, err)
+			continue
 		}
 	}
 
@@ -56,30 +60,35 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 		if !exists {
 			err := fmt.Errorf("Source subsystem %s does not exist", connection.SrcSystem)
 			errors = append(errors, err)
+			continue
 		}
 
 		_, exists = srcSystem.OutputPorts()[connection.SrcPort]
 		if !exists {
 			err := fmt.Errorf("Port %s does not exist on subsystem %s", connection.SrcPort, connection.SrcSystem)
 			errors = append(errors, err)
+			continue
 		}
 
 		destSystem, exists := tempSubsystems[connection.DestSystem]
 		if !exists {
 			err := fmt.Errorf("Destination subsystem %s does not exist", connection.DestSystem)
 			errors = append(errors, err)
+			continue
 		}
 
 		_, exists = destSystem.InputPorts()[connection.DestPort]
 		if !exists {
 			err := fmt.Errorf("Port %s does not exist on subsystem %s", connection.DestPort, connection.DestSystem)
 			errors = append(errors, err)
+			continue
 		}
 
 		throughputFloat, err := strconv.ParseFloat(connection.Throughput, 64)
 		if err != nil || throughputFloat < 0 || throughputFloat > 1 {
 			err := fmt.Errorf("Not a valid throughput value %s, must be [0-1]", connection.Throughput)
 			errors = append(errors, err)
+			continue
 		}
 
 	}

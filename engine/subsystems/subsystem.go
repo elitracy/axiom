@@ -34,13 +34,12 @@ func newSubsystem(id SubsystemID, name string) subsystem {
 func (s *subsystem) newPortID() PortID {
 	id := s.currentPortID
 	s.currentPortID++
-	return PortID(id)
+	return id
 }
 
 func (s *subsystem) newComponentID() components.ComponentID {
 	id := s.currentComponentID
 	s.currentComponentID++
-
 	return id
 }
 

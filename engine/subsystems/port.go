@@ -9,10 +9,6 @@ import (
 
 type PortID int64
 
-var (
-	currentPortID = 0
-)
-
 type PortType int
 
 const (
@@ -20,53 +16,49 @@ const (
 	PortOutput
 )
 
-func newPortID() PortID {
-	id := currentPortID
-	currentPortID++
-	return PortID(id)
+type port struct {
+	id   PortID
+	name string
 }
 
-type Port interface {
-	ID() PortID
-	Name() string
-	Subsystem() Subsystem
-	String() string
-}
-
-type CorePort struct {
-	id        PortID
-	name      string
-	subsystem Subsystem
-}
-
-func (p CorePort) ID() PortID           { return p.id }
-func (p CorePort) Name() string         { return p.name }
-func (p CorePort) Subsystem() Subsystem { return p.subsystem }
-
-func newCorePort(name string, subsystem Subsystem, component *components.Component) *CorePort {
-	return &CorePort{
-		id:        newPortID(),
-		name:      name,
-		subsystem: subsystem,
-	}
+type OutputPort struct {
+	port
+	component *components.Component
 }
 
 type InputPort struct {
-	*CorePort
+	port
 	value    utils.Unit
 	channel  string
 	received bool
 }
 
-func (p InputPort) String() string {
-	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.channel)
+func newPort(id PortID, name string) port {
+	return port{
+		id:   id,
+		name: name,
+	}
 }
 
-func NewInputPort(name string, subsystem Subsystem, channel string) *InputPort {
+func newInputPort(id PortID, name string, channel string) *InputPort {
 	return &InputPort{
-		CorePort: newCorePort(name, subsystem, nil),
-		channel:  channel,
+		port:    newPort(id, name),
+		channel: channel,
 	}
+}
+
+func newOutputPort(id PortID, name string, component *components.Component) *OutputPort {
+	return &OutputPort{
+		port:      newPort(id, name),
+		component: component,
+	}
+}
+
+func (p port) ID() PortID   { return p.id }
+func (p port) Name() string { return p.name }
+
+func (p InputPort) String() string {
+	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.channel)
 }
 
 func (p *InputPort) Clear() {
@@ -79,20 +71,8 @@ func (p *InputPort) SetValue(value utils.Unit) {
 	p.received = true
 }
 
-type OutputPort struct {
-	*CorePort
-	component *components.Component
-}
-
 func (p OutputPort) String() string {
 	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component.Name())
-}
-
-func NewOutputPort(name string, subsystem Subsystem, component *components.Component) *OutputPort {
-	return &OutputPort{
-		CorePort:  newCorePort(name, subsystem, component),
-		component: component,
-	}
 }
 
 func (p *OutputPort) Component() *components.Component { return p.component }

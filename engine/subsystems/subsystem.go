@@ -7,100 +7,80 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-var currentSubsystemID = 0
-
-func newID() SubsystemID {
-	id := currentSubsystemID
-	currentSubsystemID++
-	return SubsystemID(id)
-}
-
 type SubsystemID int64
 
-type inputHandler func(port *InputPort)
-
-type Subsystem interface {
-	ID() SubsystemID
-	Name() string
-	Effort() utils.Unit
-	Components() map[string]*components.Component
-	InputPorts() map[string]*InputPort
-	OutputPorts() map[string]*OutputPort
-	AddComponent(string, components.ComponentType, utils.Unit) error
-	AddPort(string, string, PortType) error
-	String() string
-
-	Tick()
-	onInput(name string, handler inputHandler)
-	dispatchInputs()
-	InputComponents() map[string]*components.Component
+type subsystem struct {
+	id                 SubsystemID
+	name               string
+	components         map[string]*components.Component
+	thermalResponses   map[string]utils.ThermalResponse
+	inputPorts         map[string]*InputPort
+	outputPorts        map[string]*OutputPort
+	currentPortID      PortID
+	currentComponentID components.ComponentID
 }
 
-type subsystemCore struct {
-	Subsystem
-	id              SubsystemID
-	name            string
-	components      map[string]*components.Component
-	inputHandlers   map[string]inputHandler
-	inputComponents map[string]*components.Component
-	profiles        map[string]utils.ThermalResponse
-	inputPorts      map[string]*InputPort
-	outputPorts     map[string]*OutputPort
-}
-
-func newSubsystemCore(name string) *subsystemCore {
-	return &subsystemCore{
-		id:              newID(),
-		name:            name,
-		components:      make(map[string]*components.Component),
-		inputHandlers:   make(map[string]inputHandler),
-		inputComponents: make(map[string]*components.Component),
-		profiles:        make(map[string]utils.ThermalResponse),
-		inputPorts:      make(map[string]*InputPort),
-		outputPorts:     make(map[string]*OutputPort),
+func newSubsystem(id SubsystemID, name string) subsystem {
+	return subsystem{
+		id:               id,
+		name:             name,
+		components:       make(map[string]*components.Component),
+		thermalResponses: make(map[string]utils.ThermalResponse),
+		inputPorts:       make(map[string]*InputPort),
+		outputPorts:      make(map[string]*OutputPort),
 	}
 }
 
-func (s *subsystemCore) ID() SubsystemID { return s.id }
-func (s *subsystemCore) Name() string    { return s.name }
-func (s *subsystemCore) Components() map[string]*components.Component {
+func (s *subsystem) newPortID() PortID {
+	id := s.currentPortID
+	s.currentPortID++
+	return PortID(id)
+}
+
+func (s *subsystem) newComponentID() components.ComponentID {
+	id := s.currentComponentID
+	s.currentComponentID++
+
+	return id
+}
+
+func (s subsystem) ID() SubsystemID { return s.id }
+func (s subsystem) Name() string    { return s.name }
+func (s subsystem) Components() map[string]*components.Component {
 	return s.components
 }
-func (s *subsystemCore) InputPorts() map[string]*InputPort   { return s.inputPorts }
-func (s *subsystemCore) OutputPorts() map[string]*OutputPort { return s.outputPorts }
+func (s subsystem) InputPorts() map[string]*InputPort   { return s.inputPorts }
+func (s subsystem) OutputPorts() map[string]*OutputPort { return s.outputPorts }
 
-func (s *subsystemCore) AddComponent(name string, componentType components.ComponentType, value utils.Unit) error {
+func (s *subsystem) AddComponent(name string, componentType components.ComponentType, value utils.Unit) error {
 	if _, exists := s.components[name]; exists {
 		return fmt.Errorf("Could not add component, component %v already exists on %v", name, s.Name())
 	}
 
-	component := components.NewComponent(name, componentType, value)
+	id := s.newComponentID()
+
+	component := components.NewComponent(id, name, componentType, value)
 	s.components[component.Name()] = component
 
 	return nil
 }
 
-func (s *subsystemCore) AddInputComponent(name string, componentType components.ComponentType, value utils.Unit) error {
-	if _, exists := s.inputComponents[name]; exists {
-		return fmt.Errorf("Could not add input component, input component %v already exists on %v", name, s.Name())
-	}
+func (s *subsystem) AddPort(name string, component string, kind PortType) error {
 
-	component := components.NewComponent(name, componentType, value)
-	s.inputComponents[component.Name()] = component
+	id := s.newPortID()
 
-	return nil
-}
-
-func (s *subsystemCore) AddPort(name string, component string, portType PortType) error {
-	switch portType {
+	switch kind {
 	case PortInput:
+		name = "in." + name
+
 		if _, exists := s.inputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewInputPort(name, s, component)
+		port := newInputPort(id, name, component)
 		s.inputPorts[name] = port
 	case PortOutput:
+		name = "out." + name
 
 		if _, exists := s.components[component]; !exists {
 			return fmt.Errorf("Could not add output port, component %v doesn't exist on %v", component, s.Name())
@@ -109,14 +89,21 @@ func (s *subsystemCore) AddPort(name string, component string, portType PortType
 			return fmt.Errorf("Could not add port, output port %v already exists on %v", name, s.Name())
 		}
 
-		port := NewOutputPort(name, s, s.Components()[component])
+		port := newOutputPort(id, name, s.Components()[component])
 		s.outputPorts[name] = port
 	}
 
 	return nil
 }
 
-func (s subsystemCore) String() string {
+func (s *subsystem) AddPorts(prefix string, count int, component string, kind PortType) {
+	for i := range count {
+		name := fmt.Sprintf("%s-%d", prefix, i)
+		s.AddPort(name, component, kind)
+	}
+}
+
+func (s subsystem) String() string {
 
 	output := fmt.Sprintf("%s[%d]", s.name, s.id)
 
@@ -127,13 +114,7 @@ func (s subsystemCore) String() string {
 	return output
 }
 
-func (s *subsystemCore) onInput(name string, handler inputHandler) {
-	s.inputHandlers[name] = handler
-}
-
-func (s subsystemCore) InputComponents() map[string]*components.Component { return s.inputComponents }
-
-func (s *subsystemCore) InputSum(channel string) (utils.Unit, bool) {
+func (s *subsystem) InputSum(channel string) (utils.Unit, bool) {
 	var sum utils.Unit
 	got := false
 

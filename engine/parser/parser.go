@@ -71,6 +71,11 @@ func (p *Parser) Parse(content []byte) error {
 			name := tokens[1]
 
 			typeDec := strings.Split(tokens[2], "=")
+			if len(typeDec) != 2 {
+				errors = append(errors, newParseError(row, "invalid type declaration"))
+				continue
+			}
+
 			systemType := typeDec[1]
 
 			p.Config.SubsystemDeclarations[name] = systemType
@@ -82,6 +87,10 @@ func (p *Parser) Parse(content []byte) error {
 			}
 
 			systemComponent := strings.Split(tokens[1], ".")
+			if len(systemComponent) != 2 {
+				errors = append(errors, newParseError(row, "invalid set directive"))
+				continue
+			}
 
 			system := systemComponent[0]
 			component := systemComponent[1]
@@ -100,13 +109,23 @@ func (p *Parser) Parse(content []byte) error {
 				continue
 			}
 
-			srcSystemPort := strings.Split(tokens[1], ".")
-			srcSystem := srcSystemPort[0]
-			srcPort := srcSystemPort[1]
+			srcNamePort := strings.Split(tokens[1], ".")
+			if len(srcNamePort) != 3 {
+				errors = append(errors, newParseError(row, "invalid connection source declaration"))
+				continue
+			}
 
-			destSystemPort := strings.Split(tokens[3], ".")
-			destSystem := destSystemPort[0]
-			destPort := destSystemPort[1]
+			destNamePort := strings.Split(tokens[3], ".")
+			if len(destNamePort) != 3 {
+				errors = append(errors, newParseError(row, "invalid connection destination declaration"))
+				continue
+			}
+
+			srcSystem := srcNamePort[0]
+			srcPort := fmt.Sprintf("%s.%s", srcNamePort[1], srcNamePort[2])
+
+			destSystem := destNamePort[0]
+			destPort := fmt.Sprintf("%s.%s", destNamePort[1], destNamePort[2])
 
 			throughput := tokens[4]
 

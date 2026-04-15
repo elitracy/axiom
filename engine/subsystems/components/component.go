@@ -5,15 +5,6 @@ import "github.com/elias/axiom/engine/utils"
 type ComponentType int64
 type ComponentID int64
 
-var currentComponentID ComponentID = 0
-
-func newComponentID() ComponentID {
-	id := currentComponentID
-	currentComponentID++
-
-	return id
-}
-
 //go:generate stringer -type=ComponentType
 const (
 	Temperature ComponentType = iota
@@ -27,9 +18,9 @@ type Component struct {
 	value         utils.Unit
 }
 
-func NewComponent(name string, componentType ComponentType, value utils.Unit) *Component {
+func NewComponent(id ComponentID, name string, componentType ComponentType, value utils.Unit) *Component {
 	return &Component{
-		id:            newComponentID(),
+		id:            id,
 		name:          name,
 		componentType: componentType,
 		value:         value,

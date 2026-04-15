@@ -14,14 +14,15 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 		logging.Info(ws.subsystems[name].String())
 	}
 }
+
 func (ws *WorldState) updateSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
-	depStack := utils.NewStack[subsystems.Subsystem]()
+	depStack := utils.NewStack[subsystem]()
 
-	// DFS
 	for _, system := range ws.subsystems {
 		depStack.Push(system)
+
 		for depStack.Len() > 0 {
 			subsystem := depStack.Pop()
 			if _, seen := visited[subsystem.ID()]; seen {
@@ -29,12 +30,9 @@ func (ws *WorldState) updateSubsystems() {
 			}
 
 			visited[subsystem.ID()] = struct{}{}
-			if len(ws.connections[subsystem.ID()]) <= 0 {
-				subsystem.Tick()
-			}
 
-			for _, conn := range ws.connections[subsystem.ID()] {
-				src := conn.Src().Subsystem()
+			for _, conn := range ws.connections[subsystem.Name()] {
+				src := ws.subsystems[conn.SrcSystem()]
 				if _, seen := visited[src.ID()]; !seen {
 					subsystem := ws.subsystems[src.Name()]
 					depStack.Push(subsystem)
@@ -43,7 +41,7 @@ func (ws *WorldState) updateSubsystems() {
 			}
 		}
 
-		for _, conn := range ws.connections[system.ID()] {
+		for _, conn := range ws.connections[system.Name()] {
 			srcComp := *conn.Src().Component()
 			conn.Dest().SetValue(srcComp.Value() * conn.Throughput())
 		}

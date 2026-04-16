@@ -7,7 +7,7 @@ import (
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/parser"
-	"github.com/elias/axiom/engine/simulation"
+	"github.com/elias/axiom/engine/state"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 
 	parser.Parse(content)
 
-	world := &simulation.WorldState{}
+	world := &state.WorldState{}
 	world.Init()
 
 	logging.Ok("STARTING AXIOM")

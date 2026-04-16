@@ -3,8 +3,7 @@ package filesystem
 import (
 	"strings"
 
-	"github.com/elias/axiom/engine/logging"
-	"github.com/elias/axiom/engine/simulation"
+	"github.com/elias/axiom/engine/state"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -14,7 +13,7 @@ type Shell struct {
 }
 
 type worldState interface {
-	Subsystems() []simulation.Subsystem
+	Subsystems() []state.Subsystem
 }
 
 func NewShell() *Shell {
@@ -53,14 +52,17 @@ func (s *Shell) Populate(ws worldState) {
 	s.root = root
 	s.cwd = root
 
-	logging.Debug("SUBS: %v", ws.Subsystems())
-
 	for _, subsystem := range ws.Subsystems() {
 		dir := NewDir(subsystem.Name())
 		status := NewFile("status")
 		components := NewDir("components")
 		dir.AddChild(status)
 		dir.AddChild(components)
+
+		for _, component := range subsystem.Components() {
+			file := NewFile(component.Name())
+			components.AddChild(file)
+		}
 
 		switch subsystem.Type() {
 		case utils.Power:
@@ -117,3 +119,15 @@ func (s Shell) Cat(path string) string {
 func (s Shell) Pwd() string {
 	return s.cwd.pwd()
 }
+
+func (s Shell) Tree(path string, depth int) string {
+	node := s.cwd.GetChild(path)
+
+	if node == nil {
+		return ""
+	}
+	
+	return node.tree("", false)
+}
+
+

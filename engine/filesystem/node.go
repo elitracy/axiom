@@ -172,3 +172,34 @@ func (n Node) pwd() string {
 	}
 	return n.parent.pwd() + n.Name()
 }
+
+func (n Node) tree(prefix string, isLast bool) string {
+
+	connector := "├── "
+	if isLast {
+		connector = "└── "
+	}
+
+	name := n.Name()
+	if n.isDir {
+		name += "/"
+	}
+
+	if isLast {
+		return prefix + connector + name + "\n"
+	}
+	childPrefix := prefix + "│  "
+
+	if isLast {
+		childPrefix = prefix + "   "
+	}
+
+	output := ""
+	idx := 0
+	for _, child := range n.children {
+		output += child.tree(childPrefix, idx == len(n.children)-1) + "\n"
+	}
+
+	return output
+
+}

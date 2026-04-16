@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
@@ -77,4 +78,27 @@ func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems
 func (ws *WorldState) Init() {
 	ws.subsystems = make(map[string]subsystem)
 	ws.connections = make(map[string][]*connections.Connection)
+}
+
+func (ws WorldState) GetSubsystem(name string) (subsystem, error) {
+	if subsystem, exists := ws.subsystems[name]; exists {
+		return subsystem, nil
+	}
+	return nil, fmt.Errorf("Subsystem not found %s", name)
+}
+
+func (ws WorldState) Subsystems() []subsystem {
+	keys := make([]string, 0, len(ws.subsystems))
+	for k := range ws.subsystems {
+		keys = append(keys, k)
+	}
+
+	slices.Sort(keys)
+
+	sortedSubsystems := make([]subsystem, 0, len(ws.subsystems))
+	for _, key := range keys {
+		sortedSubsystems = append(sortedSubsystems, ws.subsystems[key])
+	}
+
+	return sortedSubsystems
 }

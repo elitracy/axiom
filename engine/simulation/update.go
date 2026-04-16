@@ -2,17 +2,12 @@ package simulation
 
 import (
 	"github.com/elias/axiom/engine"
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/utils"
 )
 
 func (ws *WorldState) Update(tick *engine.Tick) {
 	ws.updateSubsystems()
-
-	for name := range ws.subsystems {
-		logging.Info(ws.subsystems[name].String())
-	}
 }
 
 func (ws *WorldState) updateSubsystems() {

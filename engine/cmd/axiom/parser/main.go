@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/logging"
@@ -44,5 +45,18 @@ func main() {
 	world.ApplyConfig(parser.Config)
 
 	logging.Ok("APPLIED CONFIG")
+
+	go func() {
+		for {
+			system, err := world.GetSubsystem("ac")
+			if err != nil {
+				logging.Error(err.Error())
+			} else {
+				logging.Info(system.String())
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
+
 	engine.RunGame(world, startTick)
 }

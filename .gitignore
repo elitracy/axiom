@@ -1,6 +1,6 @@
 # Rust build artifacts
 engine/target/
-**/logs/*.log
+**/logs/
 **/tmp/
 
 # OS files

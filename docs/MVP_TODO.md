@@ -109,10 +109,10 @@ set power.effort       0.5
 connect cooling.flow-out -> power coolant-flow 1.0
 ```
 
-- [ ] New `engine/config/` package
-- [ ] Parse `system`, `set`, `connect` directives from lines
-- [ ] Return `StationConfig` struct with declarations + collected errors (line number + message)
-- [ ] Unit test: parse valid config, parse config with errors
+- [x] New `engine/config/` package
+- [x] Parse `system`, `set`, `connect` directives from lines
+- [x] Return `StationConfig` struct with declarations + collected errors (line number + message)
+- [x] Unit test: parse valid config, parse config with errors
 
 ---
 
@@ -121,13 +121,13 @@ connect cooling.flow-out -> power coolant-flow 1.0
 
 Replace the hardcoded `Init()` body with config-driven setup. A factory creates subsystems by type name, then applies setpoints and wiring from the parsed config.
 
-- [ ] Subsystem factory: `type=power` → `NewPower()`, etc.
-- [ ] `nameIndex map[string]SubsystemID` for name-based lookup
-- [ ] Apply `set` directives to component values
-- [ ] Create ports and connections from `connect` directives
-- [ ] Return errors for the player to see via `diagnose`
+- [x] Subsystem factory: `type=power` → `NewPower()`, etc.
+- [x] `nameIndex map[string]SubsystemID` for name-based lookup
+- [x] Apply `set` directives to component values
+- [x] Create ports and connections from `connect` directives
+- [x] Return errors for the player to see via `diagnose`
 - [ ] Exported accessors: `Subsystems()`, `GetSubsystem(name)`
-- [ ] Test: apply config → tick → verify subsystem behavior matches config
+- [x] Test: apply config → tick → verify subsystem behavior matches config
 
 ---
 

@@ -10,9 +10,10 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-type subsystem interface {
+type Subsystem interface {
 	ID() subsystems.SubsystemID
 	Name() string
+	Type() utils.SubsystemType
 	Components() map[string]*components.Component
 	OutputPorts() map[string]*subsystems.OutputPort
 	InputPorts() map[string]*subsystems.InputPort
@@ -24,7 +25,7 @@ type WorldState struct {
 	currentSubsystemID  subsystems.SubsystemID
 	currentConnectionID connections.ConnectionID
 
-	subsystems  map[string]subsystem
+	subsystems  map[string]Subsystem
 	connections map[string][]*connections.Connection
 }
 
@@ -40,7 +41,7 @@ func (ws *WorldState) newConnectionID() connections.ConnectionID {
 	return id
 }
 
-func (ws *WorldState) newSubsystem(id subsystems.SubsystemID, name, subsystemType string) (subsystem, error) {
+func (ws *WorldState) newSubsystem(id subsystems.SubsystemID, name, subsystemType string) (Subsystem, error) {
 	switch subsystemType {
 	case "power":
 		return subsystems.NewPower(id, name, 0.5), nil
@@ -76,18 +77,18 @@ func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems
 }
 
 func (ws *WorldState) Init() {
-	ws.subsystems = make(map[string]subsystem)
+	ws.subsystems = make(map[string]Subsystem)
 	ws.connections = make(map[string][]*connections.Connection)
 }
 
-func (ws WorldState) GetSubsystem(name string) (subsystem, error) {
+func (ws WorldState) GetSubsystem(name string) (Subsystem, error) {
 	if subsystem, exists := ws.subsystems[name]; exists {
 		return subsystem, nil
 	}
 	return nil, fmt.Errorf("Subsystem not found %s", name)
 }
 
-func (ws WorldState) Subsystems() []subsystem {
+func (ws WorldState) Subsystems() []Subsystem {
 	keys := make([]string, 0, len(ws.subsystems))
 	for k := range ws.subsystems {
 		keys = append(keys, k)
@@ -95,7 +96,7 @@ func (ws WorldState) Subsystems() []subsystem {
 
 	slices.Sort(keys)
 
-	sortedSubsystems := make([]subsystem, 0, len(ws.subsystems))
+	sortedSubsystems := make([]Subsystem, 0, len(ws.subsystems))
 	for _, key := range keys {
 		sortedSubsystems = append(sortedSubsystems, ws.subsystems[key])
 	}

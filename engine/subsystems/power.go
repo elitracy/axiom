@@ -11,7 +11,7 @@ type Power struct {
 
 func NewPower(id SubsystemID, name string, initPower utils.Unit) *Power {
 	power := &Power{
-		subsystem: newSubsystem(id, name),
+		subsystem: newSubsystem(id, name, utils.Power),
 	}
 
 	power.AddComponent("power-out", components.Power, initPower)
@@ -20,9 +20,9 @@ func NewPower(id SubsystemID, name string, initPower utils.Unit) *Power {
 	power.thermalResponses["cooling"] = utils.NewThermalResponse(10, .05)
 	power.thermalResponses["heating"] = utils.NewThermalResponse(10, .05)
 
-		power.AddPorts("socket", 5, "power-out", PortOutput)
-		power.AddPorts("valve", 5, "temp-out", PortOutput)
-		power.AddPorts("valve", 5, "temp-in", PortInput)
+	power.AddPorts("socket", 5, "power-out", PortOutput)
+	power.AddPorts("valve", 5, "temp-out", PortOutput)
+	power.AddPorts("valve", 5, "temp-in", PortInput)
 
 	return power
 }

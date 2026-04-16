@@ -11,7 +11,7 @@ import (
 
 func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error {
 
-	tempSubsystems := make(map[string]subsystem)
+	tempSubsystems := make(map[string]Subsystem)
 	var subsystemID subsystems.SubsystemID
 
 	var errors []error

@@ -13,7 +13,7 @@ func (ws *WorldState) Update(tick *engine.Tick) {
 func (ws *WorldState) updateSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
-	depStack := utils.NewStack[subsystem]()
+	depStack := utils.NewStack[Subsystem]()
 
 	for _, system := range ws.subsystems {
 		depStack.Push(system)

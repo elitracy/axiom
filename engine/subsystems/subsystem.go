@@ -12,6 +12,7 @@ type SubsystemID int64
 type subsystem struct {
 	id                 SubsystemID
 	name               string
+	subsystemType      utils.SubsystemType
 	components         map[string]*components.Component
 	thermalResponses   map[string]utils.ThermalResponse
 	inputPorts         map[string]*InputPort
@@ -20,10 +21,11 @@ type subsystem struct {
 	currentComponentID components.ComponentID
 }
 
-func newSubsystem(id SubsystemID, name string) subsystem {
+func newSubsystem(id SubsystemID, name string, subsystemType utils.SubsystemType) subsystem {
 	return subsystem{
 		id:               id,
 		name:             name,
+		subsystemType:    subsystemType,
 		components:       make(map[string]*components.Component),
 		thermalResponses: make(map[string]utils.ThermalResponse),
 		inputPorts:       make(map[string]*InputPort),
@@ -43,8 +45,10 @@ func (s *subsystem) newComponentID() components.ComponentID {
 	return id
 }
 
-func (s subsystem) ID() SubsystemID { return s.id }
-func (s subsystem) Name() string    { return s.name }
+func (s subsystem) ID() SubsystemID           { return s.id }
+func (s subsystem) Name() string              { return s.name }
+func (s subsystem) Type() utils.SubsystemType { return s.subsystemType }
+
 func (s subsystem) Components() map[string]*components.Component {
 	return s.components
 }

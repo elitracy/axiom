@@ -4,7 +4,8 @@ import (
 	"strings"
 
 	"github.com/elias/axiom/engine/logging"
-	"github.com/elias/axiom/engine/subsystems/components"
+	"github.com/elias/axiom/engine/simulation"
+	"github.com/elias/axiom/engine/utils"
 )
 
 type Shell struct {
@@ -13,12 +14,7 @@ type Shell struct {
 }
 
 type worldState interface {
-	Subsystems() []subsystem
-}
-
-type subsystem interface {
-	Name() string
-	Components() map[string]*components.Component
+	Subsystems() []simulation.Subsystem
 }
 
 func NewShell() *Shell {
@@ -26,6 +22,9 @@ func NewShell() *Shell {
 }
 
 func (s *Shell) Populate(ws worldState) {
+	if ws == nil {
+		return
+	}
 
 	root := NewDir("/")
 	sys := NewDir("sys")
@@ -43,12 +42,35 @@ func (s *Shell) Populate(ws worldState) {
 	sys.AddChild(systems)
 	sys.AddChild(logs)
 
-	systems.AddChild(NewDir("power"))
-	systems.AddChild(NewDir("cooling"))
-	systems.AddChild(NewDir("machines"))
+	power := NewDir("power")
+	cooling := NewDir("cooling")
+	machines := NewDir("machines")
+
+	systems.AddChild(power)
+	systems.AddChild(cooling)
+	systems.AddChild(machines)
 
 	s.root = root
 	s.cwd = root
+
+	logging.Debug("SUBS: %v", ws.Subsystems())
+
+	for _, subsystem := range ws.Subsystems() {
+		dir := NewDir(subsystem.Name())
+		status := NewFile("status")
+		components := NewDir("components")
+		dir.AddChild(status)
+		dir.AddChild(components)
+
+		switch subsystem.Type() {
+		case utils.Power:
+			power.AddChild(dir)
+		case utils.Cooling:
+			cooling.AddChild(dir)
+		case utils.Machine:
+			machines.AddChild(dir)
+		}
+	}
 }
 
 func (s *Shell) Ls(path string) string {
@@ -57,7 +79,6 @@ func (s *Shell) Ls(path string) string {
 	}
 
 	if path[0] == '/' {
-		logging.Debug("HERE")
 		s.root.ls(path)
 	}
 

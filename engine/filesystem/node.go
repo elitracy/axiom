@@ -5,8 +5,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/elias/axiom/engine/logging"
 )
 
 type Node struct {
@@ -116,7 +114,6 @@ func (n *Node) ls(path string) string {
 
 	pathParts := strings.Split(path, "/")
 
-	logging.Debug("CHILDREN[%v]: %v", n.Name(), n.children)
 	child, exists := n.children[pathParts[0]]
 
 	if !exists {

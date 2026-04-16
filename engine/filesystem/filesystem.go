@@ -2,6 +2,9 @@ package filesystem
 
 import (
 	"strings"
+
+	"github.com/elias/axiom/engine/logging"
+	"github.com/elias/axiom/engine/subsystems/components"
 )
 
 type Shell struct {
@@ -9,11 +12,43 @@ type Shell struct {
 	root *Node
 }
 
-func NewShell(root *Node) *Shell {
-	return &Shell{
-		cwd:  root,
-		root: root,
-	}
+type worldState interface {
+	Subsystems() []subsystem
+}
+
+type subsystem interface {
+	Name() string
+	Components() map[string]*components.Component
+}
+
+func NewShell() *Shell {
+	return &Shell{}
+}
+
+func (s *Shell) Populate(ws worldState) {
+
+	root := NewDir("/")
+	sys := NewDir("sys")
+	usr := NewDir("usr")
+	root.AddChild(sys)
+	root.AddChild(usr)
+
+	conf := NewDir("conf")
+	bin := NewDir("bin")
+	usr.AddChild(conf)
+	usr.AddChild(bin)
+
+	logs := NewDir("logs")
+	systems := NewDir("systems")
+	sys.AddChild(systems)
+	sys.AddChild(logs)
+
+	systems.AddChild(NewDir("power"))
+	systems.AddChild(NewDir("cooling"))
+	systems.AddChild(NewDir("machines"))
+
+	s.root = root
+	s.cwd = root
 }
 
 func (s *Shell) Ls(path string) string {
@@ -22,6 +57,7 @@ func (s *Shell) Ls(path string) string {
 	}
 
 	if path[0] == '/' {
+		logging.Debug("HERE")
 		s.root.ls(path)
 	}
 

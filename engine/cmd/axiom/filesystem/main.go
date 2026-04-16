@@ -1,36 +1,18 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/filesystem"
+	"github.com/elias/axiom/engine/logging"
 )
 
 func main() {
 
-	root := filesystem.NewDir("/")
-	shell := filesystem.NewShell(root)
+	startTick := engine.NewTick()
+	logging.Init("logging/logs/debug.log", startTick)
 
-	systems := filesystem.NewDir("systems/")
-	sensors := filesystem.NewDir("sensors/")
-	file := filesystem.NewFile("file.txt")
+	shell := filesystem.NewShell()
+	shell.Populate(nil)
 
-	root.AddChild(systems)
-	root.AddChild(sensors)
-
-	power := filesystem.NewDir("power/")
-	coolant := filesystem.NewDir("coolant/")
-	lifesupport := filesystem.NewDir("life_support/")
-
-	systems.AddChild(power)
-	systems.AddChild(coolant)
-	systems.AddChild(lifesupport)
-
-	power.AddChild(file)
-	shell.Cd("systems/power/")
-
-	file.Write("test input\nnew line as well")
-	// fmt.Println(shell.Cat("file.txt"))
-	fmt.Printf(shell.Ls(""))
-
+	logging.Flush()
 }

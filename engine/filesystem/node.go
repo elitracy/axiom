@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/elias/axiom/engine/logging"
 )
 
 type Node struct {
@@ -27,9 +29,6 @@ func NewDir(path string) *Node {
 	parts := strings.Split(path, "/")
 
 	name := parts[len(parts)-1]
-	// if len(parts) == 1 && parts[0] == "" {
-	// 	name = "/"
-	// }
 
 	node := &Node{
 		name:      name,
@@ -58,13 +57,7 @@ func NewFile(path string) *Node {
 	return node
 }
 
-func (n *Node) Name() string {
-	if n.IsDir() {
-		return n.name + "/"
-	}
-
-	return n.name
-}
+func (n *Node) Name() string         { return n.name }
 func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
 func (n *Node) Parent() *Node        { return n.parent }
 func (n *Node) SetParent(node *Node) { n.parent = node }
@@ -103,26 +96,27 @@ func (n *Node) ls(path string) string {
 	}
 
 	if path == "" || path == "." {
-
-		children := []*Node{}
+		childrenSorted := []*Node{}
 		for _, child := range n.children {
-			children = append(children, child)
+			childrenSorted = append(childrenSorted, child)
 		}
-		slices.SortFunc(children, func(a, b *Node) int {
+		slices.SortFunc(childrenSorted, func(a, b *Node) int {
 			return strings.Compare(a.name, b.name)
 
 		})
 
-		output := ""
-		for _, child := range children {
-			output += fmt.Sprintf("%s\n", child)
+		childrenStrings := []string{}
+		for _, child := range childrenSorted {
+			childrenStrings = append(childrenStrings, child.String())
 		}
 
+		output := strings.Join(childrenStrings, "\n")
 		return output
 	}
 
 	pathParts := strings.Split(path, "/")
 
+	logging.Debug("CHILDREN[%v]: %v", n.Name(), n.children)
 	child, exists := n.children[pathParts[0]]
 
 	if !exists {
@@ -166,7 +160,11 @@ func (n Node) String() string {
 
 	output += fmt.Sprintf(" axiom")
 	output += n.updatedAt.Format(" Jan 01 15:04")
+
 	output += fmt.Sprintf(" %s", n.Name())
+	if n.isDir {
+		output += "/"
+	}
 
 	return output
 }

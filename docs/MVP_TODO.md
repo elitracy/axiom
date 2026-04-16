@@ -134,19 +134,20 @@ Replace the hardcoded `Init()` body with config-driven setup. A factory creates 
 ### 10. VFS population & live readers
 **Difficulty: 2**
 
-Wire the VFS to WorldState so the filesystem reflects live game state.
+Wire the VFS to WorldState so the filesystem reflects live game state. Two zones: `/sys/` is read-only live state (engine writes each tick), `/config/` is player-writable (parsed on `reload`).
 
 ```
-/station/config.ax       # writable config file
-/systems/power/status    # virtual: live subsystem state
-/systems/power/components # virtual: component values
-/logs/system.log         # virtual: last N log lines
+/sys/power/status        # virtual: live subsystem state (read-only, engine writes)
+/sys/power/components    # virtual: component values (read-only, engine writes)
+/sys/logs/system.log     # virtual: last N log lines (read-only)
+/config/station.ax       # writable .ax config file (player edits, reload parses)
 ```
 
 - [ ] Population function that builds the directory tree from WorldState
 - [ ] Virtual readers that close over subsystem references for live data
-- [ ] `/station/config.ax` initialized with starting config text (writable)
-- [ ] Log ring buffer in logging package for `/logs/system.log`
+- [ ] `/sys/` nodes are non-writable; engine populates on each tick
+- [ ] `/config/station.ax` initialized with starting config text (writable)
+- [ ] Log ring buffer in logging package for `/sys/logs/system.log`
 
 ---
 
@@ -161,8 +162,8 @@ The primary gameplay interface. Player types commands to inspect, diagnose, and 
 - [ ] `inspect <system>` — detailed view with components, connections, input values
 - [ ] `diagnose <system>` — config errors, out-of-range values, hints
 - [ ] `ls [path]` / `cat <path>` — delegate to VFS
-- [ ] `write <path>` — multi-line input, write to VFS
-- [ ] `apply` — re-parse config from VFS, call ApplyConfig(), print errors
+- [ ] `write <path>` — multi-line input, write to VFS (only valid under `/config/`)
+- [ ] `reload` — re-parse `/config/station.ax`, call ApplyConfig(), print errors
 - [ ] `set <sys>.<comp> <value>` — shortcut to modify and re-apply
 - [ ] `help [cmd]` — command list and usage
 
@@ -231,8 +232,8 @@ When complete, you should be able to:
 
 - [ ] Boot the engine and see a terminal with a station warning
 - [ ] Run `status` and `diagnose` to find the problem
-- [ ] Read and edit the config via `cat` and `write`
-- [ ] Run `apply` and watch the simulation respond
+- [ ] Read and edit the config via `cat /config/station.ax` and `write`
+- [ ] Run `reload` and watch the simulation respond
 - [ ] Add a new subsystem by editing the config
 - [ ] See tick-by-tick telemetry in a CSV file for Godot to render
 - [ ] Feel the core loop: diagnose → fix → monitor → new problem emerges

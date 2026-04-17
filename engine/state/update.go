@@ -1,4 +1,4 @@
-package simulation
+package state
 
 import (
 	"github.com/elias/axiom/engine"

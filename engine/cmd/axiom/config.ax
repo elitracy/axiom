@@ -3,7 +3,7 @@ system coolant_loop     type=cooling
 system ac               type=hvac
 
 set reactor.power-out 0.5
-set coolant_loop.temp-out 0.5
+set coolant_loop.temp-out 0.2
 set ac.target-temp 0.2
 
 connect coolant_loop.out.valve-1 -> reactor.in.valve-1 1.0

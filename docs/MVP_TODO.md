@@ -143,9 +143,9 @@ Wire the VFS to WorldState so the filesystem reflects live game state. Two zones
 /config/station.ax       # writable .ax config file (player edits, reload parses)
 ```
 
-- [ ] Population function that builds the directory tree from WorldState
-- [ ] Virtual readers that close over subsystem references for live data
-- [ ] `/sys/` nodes are non-writable; engine populates on each tick
+- [x] Population function that builds the directory tree from WorldState
+- [x] Virtual readers that close over subsystem references for live data
+- [x] `/sys/` nodes are non-writable; engine populates on each tick
 - [ ] `/config/station.ax` initialized with starting config text (writable)
 - [ ] Log ring buffer in logging package for `/sys/logs/system.log`
 

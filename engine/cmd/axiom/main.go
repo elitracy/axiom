@@ -56,7 +56,7 @@ func main() {
 	shell := filesystem.NewShell()
 	shell.Populate(world)
 
-	logging.Debug(shell.Tree("", 1))
+	logging.Debug(shell.Tree("", 0))
 
 	// logging.Ok("POWER: %v", shell.Ls("sys/systems/power"))
 	// logging.Ok("POWER: %v", shell.Ls("sys/systems/power/reactor"))

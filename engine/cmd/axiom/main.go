@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/filesystem"
@@ -56,28 +57,17 @@ func main() {
 	shell := filesystem.NewShell()
 	shell.Populate(world)
 
-	logging.Debug(shell.Tree("", 0))
+	logging.Debug(shell.Tree("", 6))
 
-	// logging.Ok("POWER: %v", shell.Ls("sys/systems/power"))
-	// logging.Ok("POWER: %v", shell.Ls("sys/systems/power/reactor"))
-	// logging.Ok("")
-	// logging.Ok("COOLING: %v", shell.Ls("sys/systems/cooling"))
-	// logging.Ok("COOLING: %v", shell.Ls("sys/systems/cooling/coolant_loop"))
-	// logging.Ok("")
-	// logging.Ok("MACHINES: %v", shell.Ls("sys/systems/machines"))
-	// logging.Ok("MACHINES: %v", shell.Ls("sys/systems/machines/ac"))
+	go func() {
+		for {
+			for _, s := range world.Subsystems() {
+				logging.Debug(s.String())
 
-	// go func() {
-	// 	for {
-	// 		system, err := world.GetSubsystem("ac")
-	// 		if err != nil {
-	// 			logging.Error(err.Error())
-	// 		} else {
-	// 			logging.Info(system.String())
-	// 		}
-	// 		time.Sleep(2 * time.Second)
-	// 	}
-	// }()
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
 
 	engine.RunGame(world, startTick)
 

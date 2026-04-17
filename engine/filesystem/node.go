@@ -173,7 +173,7 @@ func (n Node) pwd() string {
 	return n.parent.pwd() + n.Name()
 }
 
-func (n Node) tree(prefix string, isLast bool) string {
+func (n Node) tree(prefix string, isLast bool, depth int) string {
 
 	connector := " ├── "
 	if isLast {
@@ -192,9 +192,13 @@ func (n Node) tree(prefix string, isLast bool) string {
 
 	output := prefix + connector + name + "\n"
 
+	if depth == 0 {
+		return output
+	}
+
 	idx := 0
 	for _, child := range n.children {
-		output += child.tree(childPrefix, idx == len(n.children)-1)
+		output += child.tree(childPrefix, idx == len(n.children)-1, depth-1)
 		idx++
 	}
 

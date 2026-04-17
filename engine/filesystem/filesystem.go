@@ -126,8 +126,6 @@ func (s Shell) Tree(path string, depth int) string {
 	if node == nil {
 		return ""
 	}
-	
-	return node.tree("", false)
+
+	return node.tree("", true, depth)
 }
-
-

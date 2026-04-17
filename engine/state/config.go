@@ -133,7 +133,7 @@ func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) error {
 			return err
 		}
 
-		ws.addConnection(srcPort, destPort, srcSystem.Name(), srcPort.Name(), utils.Unit(throughputFloat))
+		ws.addConnection(srcPort, destPort, srcSystem.Name(), destSystem.Name(), utils.Unit(throughputFloat))
 	}
 
 	return nil

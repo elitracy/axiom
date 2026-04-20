@@ -39,7 +39,7 @@ func Tree(shell filesystem.Shell, path string, depth int) string {
 	return shell.Tree(path, depth)
 }
 
-func Write(shell filesystem.Shell, path string, content string) {
+func Write(shell *filesystem.Shell, path string, content string) {
 	node := shell.Find(path)
 
 	node.Write(content)

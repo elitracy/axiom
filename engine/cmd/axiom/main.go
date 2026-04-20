@@ -56,8 +56,36 @@ func main() {
 
 	shell := filesystem.NewShell()
 	shell.Populate(world)
+	commands.Write(shell, "/usr/conf/station.ax", string(file))
 
 	logging.Debug(shell.Tree("", 6))
+
+	newConf := string(file) + "\nsystem fooReactor type=power"
+	newConf += "\nset fooReactor.power-out 0.2"
+	newConf += "\nconnect coolant_loop.out.valve-2 -> fooReactor.in.valve-2 0.5"
+	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
+	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
+
+	commands.Write(shell, "/usr/conf/station.ax", newConf)
+
+	conf := shell.Cat("/usr/conf/station.ax")
+	parser.Parse([]byte(conf))
+
+	errs = commands.Reload(world, parser.Config)
+
+	if len(errs) > 0 {
+		for _, err := range errs {
+			logging.Error(err.Error())
+		}
+		logging.Flush()
+		return
+	}
+
+	logging.Ok("RELOADED CONFIG")
+	shell.Populate(world)
+
+	logging.Debug(shell.Tree("", 6))
+	logging.Debug(shell.Cat("/usr/conf/station.ax"))
 
 	go func() {
 		for {

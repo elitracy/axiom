@@ -34,6 +34,7 @@ func (s *Shell) Populate(ws worldState) {
 	conf := NewDir("conf")
 	bin := NewDir("bin")
 	usr.AddChild(conf)
+	conf.AddChild(NewFile("station.ax"))
 	usr.AddChild(bin)
 
 	logs := NewDir("logs")

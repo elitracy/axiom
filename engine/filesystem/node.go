@@ -55,8 +55,13 @@ func NewFile(path string) *Node {
 	return node
 }
 
-func (n *Node) Name() string         { return n.name }
-func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
+func (n *Node) Name() string { return n.name }
+func (n *Node) AddChild(node *Node) {
+	if _, exists := n.children[node.Name()]; !exists {
+		n.children[node.Name()] = node
+		node.SetParent(n)
+	}
+}
 func (n *Node) Parent() *Node        { return n.parent }
 func (n *Node) SetParent(node *Node) { n.parent = node }
 func (n *Node) IsDir() bool          { return n.isDir }

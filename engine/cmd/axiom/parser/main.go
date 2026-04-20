@@ -18,14 +18,14 @@ func main() {
 
 	stationConfig := parser.NewParserConfig()
 	parser := parser.NewParser(stationConfig)
-	content, err := parser.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
-		logging.Error(err.Error())
+		logging.Error("Could not read file: %s", path)
 		logging.Flush()
 		return
 	}
 
-	parser.Parse(content)
+	parser.Parse(file)
 
 	world := &state.WorldState{}
 	world.Init()

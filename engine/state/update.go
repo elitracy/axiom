@@ -7,10 +7,10 @@ import (
 )
 
 func (ws *WorldState) Update(tick *engine.Tick) {
-	ws.updateSubsystems()
+	ws.tickSubsystems()
 }
 
-func (ws *WorldState) updateSubsystems() {
+func (ws *WorldState) tickSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
 	depStack := utils.NewStack[Subsystem]()

@@ -129,3 +129,14 @@ func (s Shell) Tree(path string, depth int) string {
 
 	return node.tree("", true, depth)
 }
+
+func (s Shell) Find(path string) *Node {
+	path = strings.Trim(path, "/")
+	node := s.cwd.GetChild(path)
+
+	if node == nil {
+		return nil
+	}
+
+	return node
+}

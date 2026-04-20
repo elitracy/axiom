@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/commands"
 	"github.com/elias/axiom/engine/filesystem"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/parser"
@@ -26,21 +27,23 @@ func main() {
 
 	stationConfig := parser.NewParserConfig()
 	parser := parser.NewParser(stationConfig)
-	content, err := parser.ReadFile(path)
+
+	file, err := os.ReadFile(path)
 	if err != nil {
-		logging.Error(err.Error())
+		logging.Error("Could not read file: %s", path)
 		logging.Flush()
 		return
 	}
 
-	parser.Parse(content)
+	parser.Parse(file)
 
 	world := &state.WorldState{}
 	world.Init()
 
 	logging.Ok("STARTING AXIOM")
 
-	errs := world.ValidateConfig(parser.Config)
+	errs := commands.Reload(world, parser.Config)
+
 	if len(errs) > 0 {
 		for _, err := range errs {
 			logging.Error(err.Error())
@@ -48,11 +51,8 @@ func main() {
 		logging.Flush()
 		return
 	}
-	logging.Ok("VALID CONFIG")
 
-	world.ApplyConfig(parser.Config)
-
-	logging.Ok("APPLIED CONFIG")
+	logging.Ok("RELOADED CONFIG")
 
 	shell := filesystem.NewShell()
 	shell.Populate(world)
@@ -63,7 +63,6 @@ func main() {
 		for {
 			for _, s := range world.Subsystems() {
 				logging.Debug(s.String())
-
 			}
 			time.Sleep(2 * time.Second)
 		}

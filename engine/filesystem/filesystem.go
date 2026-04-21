@@ -42,6 +42,9 @@ func (s *Shell) Populate(ws worldState) {
 	sys.AddChild(systems)
 	sys.AddChild(logs)
 
+	stationLog := NewFile("station.log")
+	logs.AddChild(stationLog)
+
 	power := NewDir("power")
 	cooling := NewDir("cooling")
 	machines := NewDir("machines")
@@ -114,7 +117,7 @@ func (s Shell) Cat(path string) string {
 		return ""
 	}
 
-	return node.read()
+	return node.Read()
 }
 
 func (s Shell) Pwd() string {

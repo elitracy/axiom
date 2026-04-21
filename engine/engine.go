@@ -19,7 +19,6 @@ func (t *Tick) Tick() int64 { return t.tick.Load() }
 func NewTick() *Tick { return &Tick{tick: atomic.Int64{}} }
 
 type Game interface {
-	Init()
 	Update(tick *Tick)
 }
 

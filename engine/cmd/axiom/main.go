@@ -12,8 +12,6 @@ import (
 )
 
 func main() {
-	startTick := engine.NewTick()
-	logging.Init("logging/logs/debug.log", startTick)
 
 	args := os.Args[1:]
 	if len(args) != 1 {
@@ -22,30 +20,35 @@ func main() {
 		return
 	}
 
-	path := args[0]
+	initialConfig := args[0]
 
+	startTick := engine.NewTick()
 	stationConfig := parser.NewParserConfig()
 	parser := parser.NewParser(stationConfig)
+	world := state.NewWorldState()
+	shell := filesystem.NewShell()
 
-	file, err := os.ReadFile(path)
+	logging.Init("logging/logs/debug.log", startTick)
+	gamelog := state.NewGameLogger(512)
+
+	file, err := os.ReadFile(initialConfig)
 	if err != nil {
-		logging.Error("Could not read file: %s", path)
+		logging.Error("Could not read file: %s", initialConfig)
+		gamelog.Write(err.Error())
 		logging.Flush()
 		return
 	}
 
 	parser.Parse(file)
 
-	world := &state.WorldState{}
-	world.Init()
-
 	logging.Ok("STARTING AXIOM")
 
-	errs := commands.Reload(world, parser.Config)
+	errs := commands.Reload(world, shell, parser.Config)
 
 	if len(errs) > 0 {
 		for _, err := range errs {
 			logging.Error(err.Error())
+			gamelog.Write(err.Error())
 		}
 		logging.Flush()
 		return
@@ -53,7 +56,6 @@ func main() {
 
 	logging.Ok("RELOADED CONFIG")
 
-	shell := filesystem.NewShell()
 	shell.Populate(world)
 	commands.Write(shell, "/usr/conf/station.ax", string(file))
 
@@ -70,18 +72,18 @@ func main() {
 	conf := shell.Cat("/usr/conf/station.ax")
 	parser.Parse([]byte(conf))
 
-	errs = commands.Reload(world, parser.Config)
+	errs = commands.Reload(world, shell, parser.Config)
 
 	if len(errs) > 0 {
 		for _, err := range errs {
 			logging.Error(err.Error())
+			gamelog.Write(err.Error())
 		}
 		logging.Flush()
 		return
 	}
 
 	logging.Ok("RELOADED CONFIG")
-	shell.Populate(world)
 
 	// logging.Debug(shell.Tree("", 6))
 

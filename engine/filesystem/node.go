@@ -146,13 +146,15 @@ func (n *Node) ls(path string) string {
 	return child.ls(remaining)
 }
 
-func (n Node) read() string {
+func (n Node) Read() string {
 	if n.reader != nil {
 		n.reader()
 	}
 
 	return n.content
 }
+
+func (n *Node) SetReader(reader func() string) { n.reader = reader }
 
 func (n *Node) Write(content string) {
 	if n.writable {

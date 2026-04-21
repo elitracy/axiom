@@ -29,6 +29,13 @@ type WorldState struct {
 	connections map[string][]*connections.Connection
 }
 
+func NewWorldState() *WorldState {
+	return &WorldState{
+		subsystems:  make(map[string]Subsystem),
+		connections: make(map[string][]*connections.Connection),
+	}
+}
+
 func (ws *WorldState) newSubsystemID() subsystems.SubsystemID {
 	id := ws.currentSubsystemID
 	ws.currentSubsystemID++
@@ -74,11 +81,6 @@ func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems
 	connection := connections.NewConnection(id, src, dest, srcSystem, destSystem, throughput)
 
 	ws.connections[destSystem] = append(ws.connections[destSystem], connection)
-}
-
-func (ws *WorldState) Init() {
-	ws.subsystems = make(map[string]Subsystem)
-	ws.connections = make(map[string][]*connections.Connection)
 }
 
 func (ws WorldState) GetSubsystem(name string) (Subsystem, error) {

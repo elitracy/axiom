@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/commands"
@@ -84,17 +83,18 @@ func main() {
 	logging.Ok("RELOADED CONFIG")
 	shell.Populate(world)
 
-	logging.Debug(shell.Tree("", 6))
-	logging.Debug(shell.Cat("/usr/conf/station.ax"))
+	// logging.Debug(shell.Tree("", 6))
 
-	go func() {
-		for {
-			for _, s := range world.Subsystems() {
-				logging.Debug(s.String())
-			}
-			time.Sleep(2 * time.Second)
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		for _, s := range world.Subsystems() {
+	// 			logging.Debug(s.String())
+	// 		}
+	// 		time.Sleep(2 * time.Second)
+	// 	}
+	// }()
+
+	logging.Debug(commands.Status(shell, "coolant_loop"))
 
 	engine.RunGame(world, startTick)
 

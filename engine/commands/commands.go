@@ -5,8 +5,6 @@ import (
 	"github.com/elias/axiom/engine/parser"
 )
 
-type config any
-
 type state interface {
 	ValidateConfig(parser.ParserConfig) []error
 	ApplyConfig(parser.ParserConfig) error
@@ -27,20 +25,30 @@ func Reload(state state, config parser.ParserConfig) []error {
 	return nil
 }
 
-func Cat(shell filesystem.Shell, path string) string {
+func Cat(shell *filesystem.Shell, path string) string {
 	return shell.Cat(path)
 }
 
-func Ls(shell filesystem.Shell, path string) string {
+func Ls(shell *filesystem.Shell, path string) string {
 	return shell.Ls(path)
 }
 
-func Tree(shell filesystem.Shell, path string, depth int) string {
+func Tree(shell *filesystem.Shell, path string, depth int) string {
 	return shell.Tree(path, depth)
 }
 
 func Write(shell *filesystem.Shell, path string, content string) {
-	node := shell.Find(path)
-
+	node := shell.GetChild(path)
 	node.Write(content)
+}
+
+func Status(shell *filesystem.Shell, subsystem string) string {
+	node := shell.Find(subsystem)
+
+	if node == nil {
+		return ""
+	}
+
+	return "Healthy"
+
 }

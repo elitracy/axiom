@@ -84,7 +84,24 @@ func (n *Node) GetChild(path string) *Node {
 	}
 
 	return nil
+}
 
+// no path for now
+func (n *Node) FindChild(name string) *Node {
+	name = strings.Trim(name, "/")
+
+	if n.Name() == name {
+		return n
+	}
+
+	for _, child := range n.children {
+		node := child.FindChild(name)
+		if node != nil {
+			return node
+		}
+	}
+
+	return nil
 }
 
 func (n *Node) ls(path string) string {
@@ -187,7 +204,7 @@ func (n Node) tree(prefix string, isLast bool, depth int) string {
 
 	childPrefix := prefix + " │  "
 	if isLast {
-		childPrefix = prefix + "   "
+		childPrefix = prefix + "    "
 	}
 
 	name := n.Name()
@@ -202,7 +219,16 @@ func (n Node) tree(prefix string, isLast bool, depth int) string {
 	}
 
 	idx := 0
+	children := []*Node{}
 	for _, child := range n.children {
+		children = append(children, child)
+	}
+
+	slices.SortFunc(children, func(a, b *Node) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+
+	for _, child := range children {
 		output += child.tree(childPrefix, idx == len(n.children)-1, depth-1)
 		idx++
 	}

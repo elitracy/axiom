@@ -103,11 +103,10 @@ func main() {
 			for _, s := range game.world.Subsystems() {
 				status := game.cmd("status", s.Name())
 				msg := fmt.Sprintf("%s: %s", s.Name(), status)
-				// logging.Debug(s.String())
 				game.log.Println(msg)
-				logging.Info(strings.Join(game.log.Read(), ""))
 			}
 			game.log.Println("")
+			logging.Info(strings.Join(game.log.Read(), ""))
 			time.Sleep(2 * time.Second)
 		}
 	}()

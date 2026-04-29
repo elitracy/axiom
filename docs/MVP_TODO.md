@@ -147,7 +147,7 @@ Wire the VFS to WorldState so the filesystem reflects live game state. Two zones
 - [x] Virtual readers that close over subsystem references for live data
 - [x] `/sys/` nodes are non-writable; engine populates on each tick
 - [x] `/config/station.ax` initialized with starting config text (writable)
-- [ ] Log ring buffer in logging package for `/sys/logs/system.log`
+- [x] Log ring buffer in logging package for `/sys/logs/system.log`
 
 ---
 
@@ -156,14 +156,14 @@ Wire the VFS to WorldState so the filesystem reflects live game state. Two zones
 
 The primary gameplay interface. Player types commands to inspect, diagnose, and manipulate the station.
 
-- [ ] `CommandEngine` struct with `Execute(input string) string`
-- [ ] Dispatch via `map[string]handler`
+- [x] `CommandEngine` struct with `Execute(input string) string`
+- [x] Dispatch via `map[string]handler`
 - [ ] `status` — table of all subsystems + component values + OK/WARN/CRIT
 - [ ] `inspect <system>` — detailed view with components, connections, input values
-- [ ] `diagnose <system>` — config errors, out-of-range values, hints
-- [ ] `ls [path]` / `cat <path>` — delegate to VFS
-- [ ] `write <path>` — multi-line input, write to VFS (only valid under `/config/`)
-- [ ] `reload` — re-parse `/config/station.ax`, call ApplyConfig(), print errors
+- [x] `diagnose <system>` — config errors, out-of-range values, hints
+- [x] `ls [path]` / `cat <path>` — delegate to VFS
+- [x] `write <path>` — multi-line input, write to VFS (only valid under `/config/`)
+- [x] `reload` — re-parse `/config/station.ax`, call ApplyConfig(), print errors
 - [ ] `set <sys>.<comp> <value>` — shortcut to modify and re-apply
 - [ ] `help [cmd]` — command list and usage
 

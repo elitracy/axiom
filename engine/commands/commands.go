@@ -188,5 +188,10 @@ func (ce *CommandEngine) status(args []string) (string, error) {
 		return "", fmt.Errorf("subsystem: %s does not exist", subsystem)
 	}
 
-	return "Healthy", nil
+	status := node.FindChild("status")
+	if status == nil {
+		return "", fmt.Errorf("%s status doesn't exist", subsystem)
+	}
+
+	return status.Read(), nil
 }

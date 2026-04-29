@@ -6,22 +6,23 @@ import (
 	"strings"
 
 	"github.com/elias/axiom/engine/filesystem"
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/state"
 )
 
 type CommandEngine struct {
-	state  *state.WorldState
-	shell  *filesystem.Shell
-	parser *parser.Parser
+	state *state.State
+	shell *filesystem.Shell
 }
 
-func NewCommandEngine(state *state.WorldState, shell *filesystem.Shell, config parser.ParserConfig) *CommandEngine {
-	return &CommandEngine{
-		state:  state,
-		shell:  shell,
-		parser: parser.NewParser(config),
+func NewCommandEngine(state *state.State, shell *filesystem.Shell) *CommandEngine {
+	ce := &CommandEngine{
+		state: state,
+		shell: shell,
 	}
+
+	return ce
 }
 
 func (ce *CommandEngine) Execute(cmd string, args ...string) (string, error) {
@@ -71,13 +72,14 @@ func (ce *CommandEngine) diagnose(args []string) (string, []error) {
 	if node == nil {
 		return "", []error{fmt.Errorf("config station.ax not found")}
 	}
+	parser := parser.NewParser(parser.NewParserConfig())
 
-	err := ce.parser.Parse([]byte(node.Read()))
+	err := parser.Parse([]byte(node.Read()))
 	if err != nil {
 		return "", []error{err}
 	}
 
-	errs := ce.state.ValidateConfig(ce.parser.Config)
+	errs := ce.state.ValidateConfig(parser.Config)
 	if errs != nil {
 		return "", errs
 	}
@@ -86,26 +88,31 @@ func (ce *CommandEngine) diagnose(args []string) (string, []error) {
 }
 
 func (ce *CommandEngine) reload(args []string) (string, error) {
-	if len(args) != 0 {
-		return "", fmt.Errorf("usage: reload")
+	var node *filesystem.Node
+	config := "station.ax"
+
+	if len(args) == 1 {
+		config = args[0]
 	}
 
-	node := ce.shell.Find("station.ax")
+	node = ce.shell.Find(config)
 	if node == nil {
-		return "", fmt.Errorf("config station.ax not found")
+		return "", fmt.Errorf("config %s not found", config)
 	}
 
-	err := ce.parser.Parse([]byte(node.Read()))
+	parser := parser.NewParser(parser.NewParserConfig())
+
+	err := parser.Parse([]byte(node.Read()))
 	if err != nil {
 		return "", err
 	}
 
-	err = ce.state.ApplyConfig(ce.parser.Config)
+	err = ce.state.ApplyConfig(parser.Config)
 	if err != nil {
 		return "", err
 	}
 
-	ce.shell.Populate(ce.state)
+	ce.shell.ReloadSubsystems(ce.state)
 
 	return "station reloaded", nil
 }
@@ -128,20 +135,27 @@ func (ce *CommandEngine) ls(args []string) (string, error) {
 }
 
 func (ce *CommandEngine) tree(args []string) (string, error) {
+	path := "."
+	depth := 2
+
 	switch len(args) {
 	case 0:
 		return "", fmt.Errorf("usage: tree <path> <depth?>")
 	case 1:
-		return ce.shell.Tree(args[0], 2), nil
+		path = args[0]
 	case 2:
-		depth, err := strconv.Atoi(args[1])
+		path = args[0]
+		d, err := strconv.Atoi(args[1])
 		if err != nil {
 			return "", fmt.Errorf("usage: tree <path> <depth?>")
 		}
-		return ce.shell.Tree(args[0], depth), nil
+		depth = d
 	default:
 		return "", fmt.Errorf("usage: tree <path> <depth?>")
 	}
+
+	logging.Debug("SHELL: %v", ce.shell)
+	return ce.shell.Tree(path, depth), nil
 }
 
 func (ce *CommandEngine) write(args []string) error {

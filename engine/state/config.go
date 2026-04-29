@@ -9,7 +9,7 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error {
+func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 
 	tempSubsystems := make(map[string]Subsystem)
 	var subsystemID subsystems.SubsystemID
@@ -99,7 +99,7 @@ func (ws *WorldState) ValidateConfig(stationConfig parser.ParserConfig) []error 
 	return errors
 }
 
-func (ws *WorldState) ApplyConfig(stationConfig parser.ParserConfig) error {
+func (ws *State) ApplyConfig(stationConfig parser.ParserConfig) error {
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
 		if _, exists := ws.subsystems[name]; !exists {

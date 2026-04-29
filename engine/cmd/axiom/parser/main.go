@@ -27,7 +27,7 @@ func main() {
 
 	parser.Parse(file)
 
-	world := state.NewWorldState()
+	world := state.NewState()
 
 	logging.Ok("STARTING AXIOM")
 

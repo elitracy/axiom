@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/elias/axiom/engine/logging"
 )
 
 type Node struct {
@@ -68,7 +70,7 @@ func (n *Node) IsDir() bool          { return n.isDir }
 
 func (n *Node) GetChild(path string) *Node {
 	path = strings.Trim(path, "/")
-	if path == "" {
+	if path == "" || path == "." {
 		return n
 	}
 
@@ -146,9 +148,11 @@ func (n *Node) ls(path string) string {
 	return child.ls(remaining)
 }
 
-func (n Node) Read() string {
+func (n *Node) Read() string {
+	logging.Debug("TRYING TO READ")
 	if n.reader != nil {
-		n.reader()
+		logging.Debug("READER HERE: %v", n)
+		return n.reader()
 	}
 
 	return n.content

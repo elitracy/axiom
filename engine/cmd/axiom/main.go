@@ -1,15 +1,55 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/commands"
 	"github.com/elias/axiom/engine/filesystem"
 	"github.com/elias/axiom/engine/logging"
-	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/state"
 )
+
+type Game struct {
+	world  *state.State
+	shell  *filesystem.Shell
+	engine *commands.CommandEngine
+	log    *state.GameLogger
+}
+
+func NewGame() *Game {
+	world := state.NewState()
+	shell := filesystem.NewShell()
+
+	shell.Populate(world)
+	engine := commands.NewCommandEngine(world, shell)
+	log := state.NewGameLogger(512)
+
+	logNode := shell.GetChild("sys/logs/station.log")
+
+	logNode.SetReader(func() string {
+		return strings.Join(log.Read(), "\n")
+	})
+
+	return &Game{world, shell, engine, log}
+
+}
+
+func (g *Game) cmd(cmd string, args ...string) string {
+	val, err := g.engine.Execute(cmd, args...)
+	if err != nil {
+		logging.Error(err.Error())
+		g.log.Print(err.Error())
+		logging.Flush()
+		os.Exit(1)
+		return ""
+	}
+
+	return val
+}
 
 func main() {
 
@@ -23,55 +63,28 @@ func main() {
 	initialConfig := args[0]
 
 	startTick := engine.NewTick()
-	stationConfig := parser.NewParserConfig()
-	parser := parser.NewParser(stationConfig)
-	world := state.NewWorldState()
-	shell := filesystem.NewShell()
-	commandEngine := commands.NewCommandEngine(world, shell, stationConfig)
-
+	game := NewGame()
 	logging.Init("logging/logs/debug.log", startTick)
-	gamelog := state.NewGameLogger(512)
-	shell.Populate(world)
 
 	file, err := os.ReadFile(initialConfig)
 	if err != nil {
 		logging.Error("Could not read file: %s", initialConfig)
-		gamelog.Write(err.Error())
+		game.log.Print(err.Error())
 		logging.Flush()
 		return
 	}
 
-	parser.Parse(file)
+	game.cmd("write", "/usr/conf/station.ax", string(file))
 
 	logging.Ok("STARTING AXIOM")
 
-	_, err = commandEngine.Execute("reload")
+	game.cmd("reload")
 
-	if err != nil {
-		logging.Error(err.Error())
-		gamelog.Write(err.Error())
-		logging.Flush()
-		return
-	}
+	ls := game.cmd("ls", "/sys/systems/")
+	logging.Info("LS: %s", ls)
 
-	logging.Ok("RELOADED CONFIG")
-
-	_, err = commandEngine.Execute("write", "/usr/conf/station.ax", string(file))
-	if err != nil {
-		logging.Error("Could not read file: %s", initialConfig)
-		gamelog.Write(err.Error())
-		logging.Flush()
-		return
-	}
-
-	tree, err := commandEngine.Execute("tree", ".", "6")
-	if err != nil {
-		logging.Error("Could not tree: .")
-		gamelog.Write(err.Error())
-		logging.Flush()
-		return
-	}
-	logging.Debug("TREE: %s", tree)
+	tree := game.cmd("tree", ".", "6")
+	logging.Info("TREE: %s", tree)
 
 	newConf := string(file) + "\nsystem fooReactor type=power"
 	newConf += "\nset fooReactor.power-out 0.2"
@@ -79,41 +92,32 @@ func main() {
 	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
 	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
 
-	_, err = commandEngine.Execute("write", "/usr/conf/station.ax", newConf)
+	game.cmd("write", "/usr/conf/station.ax", newConf)
 
-	conf := shell.Cat("/usr/conf/station.ax")
-	parser.Parse([]byte(conf))
-
-	_, err = commandEngine.Execute("reload")
-	if err != nil {
-		logging.Error(err.Error())
-		gamelog.Write(err.Error())
-		logging.Flush()
-		return
-	}
+	game.cmd("reload")
 
 	logging.Ok("RELOADED CONFIG")
 
-	// logging.Debug(shell.Tree("", 6))
+	go func() {
+		for {
+			for _, s := range game.world.Subsystems() {
+				status := game.cmd("status", s.Name())
+				msg := fmt.Sprintf("%s: %s", s.Name(), status)
+				// logging.Debug(s.String())
+				game.log.Println(msg)
+				logging.Info(strings.Join(game.log.Read(), ""))
+			}
+			game.log.Println("")
+			time.Sleep(2 * time.Second)
+		}
+	}()
 
-	// go func() {
-	// 	for {
-	// 		for _, s := range world.Subsystems() {
-	// 			logging.Debug(s.String())
-	// 		}
-	// 		time.Sleep(2 * time.Second)
-	// 	}
-	// }()
+	status := game.cmd("status", "coolant_loop")
+	logging.Info(status)
 
-	status, err := commandEngine.Execute("status", "coolant_loop")
-	if err != nil {
-		logging.Error(err.Error())
-		gamelog.Write(err.Error())
-		logging.Flush()
-		return
-	}
-	logging.Debug(status)
+	log := game.cmd("cat", "/sys/logs/station.log")
+	logging.Info("LOG: %s", log)
 
-	engine.RunGame(world, startTick)
+	engine.RunGame(game.world, startTick)
 
 }

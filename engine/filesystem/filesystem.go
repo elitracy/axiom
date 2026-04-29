@@ -3,6 +3,7 @@ package filesystem
 import (
 	"strings"
 
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/state"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -55,6 +56,13 @@ func (s *Shell) Populate(ws worldState) {
 
 	s.root = root
 	s.cwd = root
+
+}
+
+func (s *Shell) ReloadSubsystems(ws worldState) {
+	power := s.GetChild("sys/systems/power")
+	cooling := s.GetChild("sys/systems/cooling")
+	machines := s.GetChild("sys/systems/machines")
 
 	for _, subsystem := range ws.Subsystems() {
 		dir := NewDir(subsystem.Name())
@@ -112,6 +120,8 @@ func (s *Shell) Cd(path string) {
 func (s Shell) Cat(path string) string {
 	path = strings.Trim(path, "/")
 	node := s.cwd.GetChild(path)
+	logging.Debug("PATH: %v", path)
+	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""
@@ -126,6 +136,7 @@ func (s Shell) Pwd() string {
 
 func (s Shell) Tree(path string, depth int) string {
 	node := s.cwd.GetChild(path)
+	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""

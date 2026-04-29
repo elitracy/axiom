@@ -27,9 +27,11 @@ func main() {
 	parser := parser.NewParser(stationConfig)
 	world := state.NewWorldState()
 	shell := filesystem.NewShell()
+	commandEngine := commands.NewCommandEngine(world, shell, stationConfig)
 
 	logging.Init("logging/logs/debug.log", startTick)
 	gamelog := state.NewGameLogger(512)
+	shell.Populate(world)
 
 	file, err := os.ReadFile(initialConfig)
 	if err != nil {
@@ -43,23 +45,33 @@ func main() {
 
 	logging.Ok("STARTING AXIOM")
 
-	errs := commands.Reload(world, shell, parser.Config)
+	_, err = commandEngine.Execute("reload")
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			logging.Error(err.Error())
-			gamelog.Write(err.Error())
-		}
+	if err != nil {
+		logging.Error(err.Error())
+		gamelog.Write(err.Error())
 		logging.Flush()
 		return
 	}
 
 	logging.Ok("RELOADED CONFIG")
 
-	shell.Populate(world)
-	commands.Write(shell, "/usr/conf/station.ax", string(file))
+	_, err = commandEngine.Execute("write", "/usr/conf/station.ax", string(file))
+	if err != nil {
+		logging.Error("Could not read file: %s", initialConfig)
+		gamelog.Write(err.Error())
+		logging.Flush()
+		return
+	}
 
-	logging.Debug(shell.Tree("", 6))
+	tree, err := commandEngine.Execute("tree", ".", "6")
+	if err != nil {
+		logging.Error("Could not tree: .")
+		gamelog.Write(err.Error())
+		logging.Flush()
+		return
+	}
+	logging.Debug("TREE: %s", tree)
 
 	newConf := string(file) + "\nsystem fooReactor type=power"
 	newConf += "\nset fooReactor.power-out 0.2"
@@ -67,18 +79,15 @@ func main() {
 	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
 	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
 
-	commands.Write(shell, "/usr/conf/station.ax", newConf)
+	_, err = commandEngine.Execute("write", "/usr/conf/station.ax", newConf)
 
 	conf := shell.Cat("/usr/conf/station.ax")
 	parser.Parse([]byte(conf))
 
-	errs = commands.Reload(world, shell, parser.Config)
-
-	if len(errs) > 0 {
-		for _, err := range errs {
-			logging.Error(err.Error())
-			gamelog.Write(err.Error())
-		}
+	_, err = commandEngine.Execute("reload")
+	if err != nil {
+		logging.Error(err.Error())
+		gamelog.Write(err.Error())
 		logging.Flush()
 		return
 	}
@@ -96,7 +105,14 @@ func main() {
 	// 	}
 	// }()
 
-	logging.Debug(commands.Status(shell, "coolant_loop"))
+	status, err := commandEngine.Execute("status", "coolant_loop")
+	if err != nil {
+		logging.Error(err.Error())
+		gamelog.Write(err.Error())
+		logging.Flush()
+		return
+	}
+	logging.Debug(status)
 
 	engine.RunGame(world, startTick)
 

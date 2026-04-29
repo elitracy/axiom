@@ -6,11 +6,11 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (ws *WorldState) Update(tick *engine.Tick) {
-	ws.updateSubsystems()
+func (ws *State) Update(tick *engine.Tick) {
+	ws.tickSubsystems()
 }
 
-func (ws *WorldState) updateSubsystems() {
+func (ws *State) tickSubsystems() {
 	visited := make(map[subsystems.SubsystemID]struct{})
 
 	depStack := utils.NewStack[Subsystem]()

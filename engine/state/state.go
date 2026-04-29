@@ -21,7 +21,7 @@ type Subsystem interface {
 	Tick()
 }
 
-type WorldState struct {
+type State struct {
 	currentSubsystemID  subsystems.SubsystemID
 	currentConnectionID connections.ConnectionID
 
@@ -29,19 +29,26 @@ type WorldState struct {
 	connections map[string][]*connections.Connection
 }
 
-func (ws *WorldState) newSubsystemID() subsystems.SubsystemID {
+func NewState() *State {
+	return &State{
+		subsystems:  make(map[string]Subsystem),
+		connections: make(map[string][]*connections.Connection),
+	}
+}
+
+func (ws *State) newSubsystemID() subsystems.SubsystemID {
 	id := ws.currentSubsystemID
 	ws.currentSubsystemID++
 	return id
 }
 
-func (ws *WorldState) newConnectionID() connections.ConnectionID {
+func (ws *State) newConnectionID() connections.ConnectionID {
 	id := ws.currentConnectionID
 	ws.currentConnectionID++
 	return id
 }
 
-func (ws *WorldState) newSubsystem(id subsystems.SubsystemID, name, subsystemType string) (Subsystem, error) {
+func (ws *State) newSubsystem(id subsystems.SubsystemID, name, subsystemType string) (Subsystem, error) {
 	switch subsystemType {
 	case "power":
 		return subsystems.NewPower(id, name, 0.5), nil
@@ -54,7 +61,7 @@ func (ws *WorldState) newSubsystem(id subsystems.SubsystemID, name, subsystemTyp
 	}
 }
 
-func (ws *WorldState) addSubsystem(name, subsystemType string) error {
+func (ws *State) addSubsystem(name, subsystemType string) error {
 	id := ws.newSubsystemID()
 
 	subsystem, err := ws.newSubsystem(id, name, subsystemType)
@@ -68,7 +75,7 @@ func (ws *WorldState) addSubsystem(name, subsystemType string) error {
 	return nil
 }
 
-func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem string, destSystem string, throughput utils.Unit) {
+func (ws *State) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem string, destSystem string, throughput utils.Unit) {
 	id := ws.newConnectionID()
 
 	connection := connections.NewConnection(id, src, dest, srcSystem, destSystem, throughput)
@@ -76,19 +83,14 @@ func (ws *WorldState) addConnection(src *subsystems.OutputPort, dest *subsystems
 	ws.connections[destSystem] = append(ws.connections[destSystem], connection)
 }
 
-func (ws *WorldState) Init() {
-	ws.subsystems = make(map[string]Subsystem)
-	ws.connections = make(map[string][]*connections.Connection)
-}
-
-func (ws WorldState) GetSubsystem(name string) (Subsystem, error) {
+func (ws State) GetSubsystem(name string) (Subsystem, error) {
 	if subsystem, exists := ws.subsystems[name]; exists {
 		return subsystem, nil
 	}
 	return nil, fmt.Errorf("Subsystem not found %s", name)
 }
 
-func (ws WorldState) Subsystems() []Subsystem {
+func (ws State) Subsystems() []Subsystem {
 	keys := make([]string, 0, len(ws.subsystems))
 	for k := range ws.subsystems {
 		keys = append(keys, k)

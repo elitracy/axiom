@@ -1,19 +1,57 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/commands"
 	"github.com/elias/axiom/engine/filesystem"
 	"github.com/elias/axiom/engine/logging"
-	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/state"
 )
 
+type Game struct {
+	world  *state.State
+	shell  *filesystem.Shell
+	engine *commands.CommandEngine
+	log    *state.GameLogger
+}
+
+func NewGame() *Game {
+	world := state.NewState()
+	shell := filesystem.NewShell()
+
+	shell.Populate(world)
+	engine := commands.NewCommandEngine(world, shell)
+	log := state.NewGameLogger(512)
+
+	logNode := shell.GetChild("sys/logs/station.log")
+
+	logNode.SetReader(func() string {
+		return strings.Join(log.Read(), "\n")
+	})
+
+	return &Game{world, shell, engine, log}
+
+}
+
+func (g *Game) cmd(cmd string, args ...string) string {
+	val, err := g.engine.Execute(cmd, args...)
+	if err != nil {
+		logging.Error(err.Error())
+		g.log.Print(err.Error())
+		logging.Flush()
+		os.Exit(1)
+		return ""
+	}
+
+	return val
+}
+
 func main() {
-	startTick := engine.NewTick()
-	logging.Init("logging/logs/debug.log", startTick)
 
 	args := os.Args[1:]
 	if len(args) != 1 {
@@ -22,53 +60,64 @@ func main() {
 		return
 	}
 
-	path := args[0]
+	initialConfig := args[0]
 
-	stationConfig := parser.NewParserConfig()
-	parser := parser.NewParser(stationConfig)
-	content, err := parser.ReadFile(path)
+	startTick := engine.NewTick()
+	game := NewGame()
+	logging.Init("logging/logs/debug.log", startTick)
+
+	file, err := os.ReadFile(initialConfig)
 	if err != nil {
-		logging.Error(err.Error())
+		logging.Error("Could not read file: %s", initialConfig)
+		game.log.Print(err.Error())
 		logging.Flush()
 		return
 	}
 
-	parser.Parse(content)
-
-	world := &state.WorldState{}
-	world.Init()
+	game.cmd("write", "/usr/conf/station.ax", string(file))
 
 	logging.Ok("STARTING AXIOM")
 
-	errs := world.ValidateConfig(parser.Config)
-	if len(errs) > 0 {
-		for _, err := range errs {
-			logging.Error(err.Error())
-		}
-		logging.Flush()
-		return
-	}
-	logging.Ok("VALID CONFIG")
+	game.cmd("reload")
 
-	world.ApplyConfig(parser.Config)
+	ls := game.cmd("ls", "/sys/systems/")
+	logging.Info("LS: %s", ls)
 
-	logging.Ok("APPLIED CONFIG")
+	tree := game.cmd("tree", ".", "6")
+	logging.Info("TREE: %s", tree)
 
-	shell := filesystem.NewShell()
-	shell.Populate(world)
+	newConf := string(file) + "\nsystem fooReactor type=power"
+	newConf += "\nset fooReactor.power-out 0.2"
+	newConf += "\nconnect coolant_loop.out.valve-2 -> fooReactor.in.valve-2 0.5"
+	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
+	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
 
-	logging.Debug(shell.Tree("", 6))
+	game.cmd("write", "/usr/conf/station.ax", newConf)
+
+	game.cmd("reload")
+
+	logging.Ok("RELOADED CONFIG")
 
 	go func() {
 		for {
-			for _, s := range world.Subsystems() {
-				logging.Debug(s.String())
-
+			for _, s := range game.world.Subsystems() {
+				status := game.cmd("status", s.Name())
+				msg := fmt.Sprintf("%s: %s", s.Name(), status)
+				// logging.Debug(s.String())
+				game.log.Println(msg)
+				logging.Info(strings.Join(game.log.Read(), ""))
 			}
+			game.log.Println("")
 			time.Sleep(2 * time.Second)
 		}
 	}()
 
-	engine.RunGame(world, startTick)
+	status := game.cmd("status", "coolant_loop")
+	logging.Info(status)
+
+	log := game.cmd("cat", "/sys/logs/station.log")
+	logging.Info("LOG: %s", log)
+
+	engine.RunGame(game.world, startTick)
 
 }

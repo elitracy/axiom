@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -42,8 +41,8 @@ type Parser struct {
 	tokens []token
 }
 
-func NewParser(config ParserConfig) Parser {
-	return Parser{
+func NewParser(config ParserConfig) *Parser {
+	return &Parser{
 		Config: config,
 	}
 }
@@ -146,14 +145,5 @@ func (p *Parser) Parse(content []byte) error {
 
 	p.Config.Errors = errors
 	return nil
-
-}
-
-func (p *Parser) ReadFile(path string) ([]byte, error) {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("Could not read file: %s", path)
-	}
-	return file, nil
 
 }

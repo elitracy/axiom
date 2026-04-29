@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/elias/axiom/engine/logging"
 )
 
 type Node struct {
@@ -55,15 +57,20 @@ func NewFile(path string) *Node {
 	return node
 }
 
-func (n *Node) Name() string         { return n.name }
-func (n *Node) AddChild(node *Node)  { n.children[node.Name()] = node; node.SetParent(n) }
+func (n *Node) Name() string { return n.name }
+func (n *Node) AddChild(node *Node) {
+	if _, exists := n.children[node.Name()]; !exists {
+		n.children[node.Name()] = node
+		node.SetParent(n)
+	}
+}
 func (n *Node) Parent() *Node        { return n.parent }
 func (n *Node) SetParent(node *Node) { n.parent = node }
 func (n *Node) IsDir() bool          { return n.isDir }
 
 func (n *Node) GetChild(path string) *Node {
 	path = strings.Trim(path, "/")
-	if path == "" {
+	if path == "" || path == "." {
 		return n
 	}
 
@@ -79,7 +86,24 @@ func (n *Node) GetChild(path string) *Node {
 	}
 
 	return nil
+}
 
+// no path for now
+func (n *Node) FindChild(name string) *Node {
+	name = strings.Trim(name, "/")
+
+	if n.Name() == name {
+		return n
+	}
+
+	for _, child := range n.children {
+		node := child.FindChild(name)
+		if node != nil {
+			return node
+		}
+	}
+
+	return nil
 }
 
 func (n *Node) ls(path string) string {
@@ -124,13 +148,17 @@ func (n *Node) ls(path string) string {
 	return child.ls(remaining)
 }
 
-func (n Node) read() string {
+func (n *Node) Read() string {
+	logging.Debug("TRYING TO READ")
 	if n.reader != nil {
-		n.reader()
+		logging.Debug("READER HERE: %v", n)
+		return n.reader()
 	}
 
 	return n.content
 }
+
+func (n *Node) SetReader(reader func() string) { n.reader = reader }
 
 func (n *Node) Write(content string) {
 	if n.writable {
@@ -182,7 +210,7 @@ func (n Node) tree(prefix string, isLast bool, depth int) string {
 
 	childPrefix := prefix + " │  "
 	if isLast {
-		childPrefix = prefix + "   "
+		childPrefix = prefix + "    "
 	}
 
 	name := n.Name()
@@ -197,7 +225,16 @@ func (n Node) tree(prefix string, isLast bool, depth int) string {
 	}
 
 	idx := 0
+	children := []*Node{}
 	for _, child := range n.children {
+		children = append(children, child)
+	}
+
+	slices.SortFunc(children, func(a, b *Node) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+
+	for _, child := range children {
 		output += child.tree(childPrefix, idx == len(n.children)-1, depth-1)
 		idx++
 	}

@@ -3,6 +3,7 @@ package filesystem
 import (
 	"strings"
 
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/state"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -34,12 +35,16 @@ func (s *Shell) Populate(ws worldState) {
 	conf := NewDir("conf")
 	bin := NewDir("bin")
 	usr.AddChild(conf)
+	conf.AddChild(NewFile("station.ax"))
 	usr.AddChild(bin)
 
 	logs := NewDir("logs")
 	systems := NewDir("systems")
 	sys.AddChild(systems)
 	sys.AddChild(logs)
+
+	stationLog := NewFile("station.log")
+	logs.AddChild(stationLog)
 
 	power := NewDir("power")
 	cooling := NewDir("cooling")
@@ -51,6 +56,13 @@ func (s *Shell) Populate(ws worldState) {
 
 	s.root = root
 	s.cwd = root
+
+}
+
+func (s *Shell) ReloadSubsystems(ws worldState) {
+	power := s.GetChild("sys/systems/power")
+	cooling := s.GetChild("sys/systems/cooling")
+	machines := s.GetChild("sys/systems/machines")
 
 	for _, subsystem := range ws.Subsystems() {
 		dir := NewDir(subsystem.Name())
@@ -108,12 +120,14 @@ func (s *Shell) Cd(path string) {
 func (s Shell) Cat(path string) string {
 	path = strings.Trim(path, "/")
 	node := s.cwd.GetChild(path)
+	logging.Debug("PATH: %v", path)
+	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""
 	}
 
-	return node.read()
+	return node.Read()
 }
 
 func (s Shell) Pwd() string {
@@ -122,10 +136,34 @@ func (s Shell) Pwd() string {
 
 func (s Shell) Tree(path string, depth int) string {
 	node := s.cwd.GetChild(path)
+	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""
 	}
 
 	return node.tree("", true, depth)
+}
+
+func (s Shell) GetChild(path string) *Node {
+	path = strings.Trim(path, "/")
+	node := s.cwd.GetChild(path)
+
+	if node == nil {
+		return nil
+	}
+
+	return node
+}
+
+func (s Shell) Find(path string) *Node {
+	path = strings.Trim(path, "/")
+
+	node := s.cwd.FindChild(path)
+
+	if node == nil {
+		return nil
+	}
+
+	return node
 }

@@ -5,8 +5,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/elias/axiom/engine/logging"
 )
 
 type Node struct {
@@ -64,9 +62,10 @@ func (n *Node) AddChild(node *Node) {
 		node.SetParent(n)
 	}
 }
-func (n *Node) Parent() *Node        { return n.parent }
-func (n *Node) SetParent(node *Node) { n.parent = node }
-func (n *Node) IsDir() bool          { return n.isDir }
+func (n *Node) Parent() *Node              { return n.parent }
+func (n *Node) SetParent(node *Node)       { n.parent = node }
+func (n *Node) IsDir() bool                { return n.isDir }
+func (n *Node) Children() map[string]*Node { return n.children }
 
 func (n *Node) GetChild(path string) *Node {
 	path = strings.Trim(path, "/")
@@ -124,7 +123,6 @@ func (n *Node) ls(path string) string {
 		}
 		slices.SortFunc(childrenSorted, func(a, b *Node) int {
 			return strings.Compare(a.name, b.name)
-
 		})
 
 		childrenStrings := []string{}
@@ -149,9 +147,7 @@ func (n *Node) ls(path string) string {
 }
 
 func (n *Node) Read() string {
-	logging.Debug("TRYING TO READ")
 	if n.reader != nil {
-		logging.Debug("READER HERE: %v", n)
 		return n.reader()
 	}
 

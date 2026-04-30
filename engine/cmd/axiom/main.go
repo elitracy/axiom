@@ -101,12 +101,12 @@ func main() {
 	go func() {
 		for {
 			for _, s := range game.world.Subsystems() {
-				status := game.cmd("status", s.Name())
-				msg := fmt.Sprintf("%s: %s", s.Name(), status)
-				game.log.Println(msg)
+				// if s.Name() == "ac" {
+				status := game.cmd("inspect", s.Name())
+				msg := fmt.Sprintf(status)
+				logging.Info(msg)
+				// }
 			}
-			game.log.Println("")
-			logging.Info(strings.Join(game.log.Read(), ""))
 			time.Sleep(2 * time.Second)
 		}
 	}()

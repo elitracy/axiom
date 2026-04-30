@@ -1,6 +1,10 @@
 package components
 
-import "github.com/elias/axiom/engine/utils"
+import (
+	"fmt"
+
+	"github.com/elias/axiom/engine/utils"
+)
 
 type ComponentType int64
 type ComponentID int64
@@ -38,4 +42,8 @@ func (c *Component) AddValue(value utils.Unit) *Component {
 	c.value = c.value.Clamp()
 
 	return c
+}
+
+func (c *Component) String() string {
+	return fmt.Sprintf("%s[%s]: %.2f", c.Name(), c.Type(), c.Value())
 }

@@ -68,7 +68,7 @@ func (s *subsystem) AddComponent(name string, componentType components.Component
 	return nil
 }
 
-func (s *subsystem) AddPort(name string, component string, kind PortType) error {
+func (s *subsystem) addPort(name string, component string, kind PortType) error {
 
 	id := s.newPortID()
 
@@ -80,7 +80,7 @@ func (s *subsystem) AddPort(name string, component string, kind PortType) error 
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
-		port := newInputPort(id, name, component)
+		port := newInputPort(id, name, s.Components()[component])
 		s.inputPorts[name] = port
 	case PortOutput:
 		name = "out." + name
@@ -102,7 +102,7 @@ func (s *subsystem) AddPort(name string, component string, kind PortType) error 
 func (s *subsystem) AddPorts(prefix string, count int, component string, kind PortType) {
 	for i := range count {
 		name := fmt.Sprintf("%s-%d", prefix, i)
-		s.AddPort(name, component, kind)
+		s.addPort(name, component, kind)
 	}
 }
 
@@ -117,17 +117,15 @@ func (s subsystem) String() string {
 	return output
 }
 
-func (s *subsystem) InputSum(channel string) (utils.Unit, bool) {
-	var sum utils.Unit
-	got := false
+func (s *subsystem) PortValue(component string) utils.Unit {
 
+	var value utils.Unit
 	for _, p := range s.inputPorts {
-		if p.channel == channel && p.received {
-			got = true
-			sum += p.value
+		if p.component.Name() == component && p.received {
+			value = p.value
 			p.Clear()
 		}
 	}
 
-	return sum, got
+	return value
 }

@@ -1,10 +1,12 @@
 package filesystem
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/state"
+	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -15,6 +17,7 @@ type Shell struct {
 
 type worldState interface {
 	Subsystems() []state.Subsystem
+	Connections() map[string][]*connections.Connection
 }
 
 func NewShell() *Shell {
@@ -68,12 +71,59 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 		dir := NewDir(subsystem.Name())
 		status := NewFile("status")
 		components := NewDir("components")
+		ports := NewDir("ports")
 		dir.AddChild(status)
 		dir.AddChild(components)
+		dir.AddChild(ports)
+
+		status.SetReader(func() string {
+			return subsystem.Status().String()
+		})
 
 		for _, component := range subsystem.Components() {
-			file := NewFile(component.Name())
-			components.AddChild(file)
+			dir := NewDir(component.Name())
+			components.AddChild(dir)
+
+			compType := NewFile("type")
+			compType.SetReader(func() string {
+				return component.Type().String()
+			})
+
+			compValue := NewFile("value")
+			compValue.SetReader(func() string {
+				return fmt.Sprintf("%.2f", component.Value())
+			})
+
+			dir.AddChild(compType)
+			dir.AddChild(compValue)
+
+			ports := NewDir("ports")
+			dir.AddChild(ports)
+
+			logging.Debug("SYS: %v", subsystem)
+			for _, port := range subsystem.InputPorts() {
+				logging.Debug("PORT: %v", port)
+				if port.Component().Name() == component.Name() {
+					file := NewFile(port.Name())
+					file.SetReader(func() string {
+						return port.Name()
+					})
+
+					ports.AddChild(file)
+				}
+			}
+
+			for _, port := range subsystem.OutputPorts() {
+				if port.Component().Name() == component.Name() {
+					file := NewFile(port.Name())
+					file.SetReader(func() string {
+						return port.Name()
+					})
+
+					ports.AddChild(file)
+				}
+			}
+
 		}
 
 		switch subsystem.Type() {

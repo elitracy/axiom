@@ -19,6 +19,7 @@ type Subsystem interface {
 	InputPorts() map[string]*subsystems.InputPort
 	String() string
 	Tick()
+	Status() utils.Status
 }
 
 type State struct {
@@ -90,7 +91,7 @@ func (ws State) GetSubsystem(name string) (Subsystem, error) {
 	return nil, fmt.Errorf("Subsystem not found %s", name)
 }
 
-func (ws State) Subsystems() []Subsystem {
+func (ws *State) Subsystems() []Subsystem {
 	keys := make([]string, 0, len(ws.subsystems))
 	for k := range ws.subsystems {
 		keys = append(keys, k)
@@ -105,3 +106,5 @@ func (ws State) Subsystems() []Subsystem {
 
 	return sortedSubsystems
 }
+
+func (ws *State) Connections() map[string][]*connections.Connection { return ws.connections }

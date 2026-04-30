@@ -38,7 +38,7 @@ func (ws *State) tickSubsystems() {
 
 		for _, conn := range ws.connections[system.Name()] {
 			srcComp := *conn.Src().Component()
-			conn.Dest().SetValue(srcComp.Value() * conn.Throughput())
+			conn.Dest().AddValue(srcComp.Value() * conn.Throughput())
 		}
 		system.Tick()
 

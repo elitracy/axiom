@@ -30,13 +30,15 @@ func NewPower(id SubsystemID, name string, initPower utils.Unit) *Power {
 
 func (s *Power) Tick() {
 
-	currentTemp := s.components["temp-out"].Value()
+	currentTemp := s.components["temp-out"]
+	tempIn := s.components["temp-in"]
 
-	heatingDelta := s.thermalResponses["heating"].Delta(currentTemp, s.components["power-out"].Value())
+	heatingDelta := s.thermalResponses["heating"].Delta(currentTemp.Value(), s.components["power-out"].Value())
 
 	var coolingDelta utils.Unit
-	tempIn := s.PortValue("temp-in")
-	coolingDelta = s.thermalResponses["cooling"].Delta(currentTemp, tempIn)
+	if tempIn.HasValue() {
+		coolingDelta = s.thermalResponses["cooling"].Delta(currentTemp.Value(), tempIn.Value())
+	}
 
 	s.components["temp-out"].AddValue(heatingDelta + coolingDelta)
 }

@@ -76,12 +76,9 @@ func main() {
 
 	game.cmd("write", "/usr/conf/station.ax", string(file))
 
-	logging.Ok("STARTING AXIOM")
+	logging.Ok("===STARTING AXIOM===")
 
 	game.cmd("reload")
-
-	ls := game.cmd("ls", "/sys/systems/")
-	logging.Info("LS: %s", ls)
 
 	tree := game.cmd("tree", ".", "6")
 	logging.Info("TREE: %s", tree)
@@ -95,8 +92,6 @@ func main() {
 	game.cmd("write", "/usr/conf/station.ax", newConf)
 
 	game.cmd("reload")
-
-	logging.Ok("RELOADED CONFIG")
 
 	go func() {
 		for {

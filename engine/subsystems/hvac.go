@@ -16,11 +16,11 @@ func NewHvac(id SubsystemID, name string, targetTemp utils.Unit) *Hvac {
 		targetTemp: targetTemp,
 	}
 
+	hvac.thermalResponses["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
+
 	hvac.AddComponent("temp", components.Temperature, targetTemp)
 	hvac.AddComponent("temp-in", components.Temperature, targetTemp)
 	hvac.AddComponent("power-in", components.Power, 0)
-
-	hvac.thermalResponses["temp-regulation"] = utils.NewThermalResponse(10, 0.01)
 
 	hvac.AddPorts("socket", 5, "power-in", PortInput)
 	hvac.AddPorts("valve", 5, "temp-in", PortInput)
@@ -31,18 +31,14 @@ func NewHvac(id SubsystemID, name string, targetTemp utils.Unit) *Hvac {
 func (s *Hvac) Tick() {
 	currentTemp := s.components["temp"].Value()
 
-	tempIn := s.PortValue("temp-in")
-	powerIn := s.PortValue("power-in")
+	tempIn := s.components["temp-in"].Value()
+	powerIn := s.components["power-in"].Value()
 
 	net := max(0, tempIn-powerIn)
 
 	regulationDelta := s.thermalResponses["temp-regulation"].Delta(currentTemp, s.targetTemp)
 
 	s.components["temp"].AddValue(net + regulationDelta)
-
-	for _, port := range s.InputPorts() {
-		port.Clear()
-	}
 }
 
 func (s *Hvac) Status() utils.Status {

@@ -116,16 +116,3 @@ func (s subsystem) String() string {
 
 	return output
 }
-
-func (s *subsystem) PortValue(component string) utils.Unit {
-
-	var value utils.Unit
-	for _, p := range s.inputPorts {
-		if p.component.Name() == component && p.received {
-			value = p.value
-			p.Clear()
-		}
-	}
-
-	return value
-}

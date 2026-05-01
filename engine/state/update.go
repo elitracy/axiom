@@ -16,6 +16,12 @@ func (ws *State) tickSubsystems() {
 	depStack := utils.NewStack[Subsystem]()
 
 	for _, system := range ws.subsystems {
+		for _, port := range system.InputPorts() {
+			port.Component().Clear()
+		}
+	}
+
+	for _, system := range ws.subsystems {
 		depStack.Push(system)
 
 		for depStack.Len() > 0 {
@@ -38,10 +44,10 @@ func (ws *State) tickSubsystems() {
 
 		for _, conn := range ws.connections[system.Name()] {
 			srcComp := *conn.Src().Component()
-			conn.Dest().AddValue(srcComp.Value() * conn.Throughput())
+			conn.Dest().SetValue(srcComp.Value() * conn.Throughput())
 		}
-		system.Tick()
 
+		system.Tick()
 	}
 
 }

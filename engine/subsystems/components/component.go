@@ -20,6 +20,7 @@ type Component struct {
 	name          string
 	componentType ComponentType
 	value         utils.Unit
+	hasValue      bool
 }
 
 func NewComponent(id ComponentID, name string, componentType ComponentType, value utils.Unit) *Component {
@@ -31,11 +32,16 @@ func NewComponent(id ComponentID, name string, componentType ComponentType, valu
 	}
 }
 
-func (c Component) ID() ComponentID                       { return c.id }
-func (c Component) Type() ComponentType                   { return c.componentType }
-func (c Component) Name() string                          { return c.name }
-func (c Component) Value() utils.Unit                     { return c.value }
-func (c *Component) SetValue(value utils.Unit) *Component { c.value = value.Clamp(); return c }
+func (c Component) ID() ComponentID     { return c.id }
+func (c Component) Type() ComponentType { return c.componentType }
+func (c Component) Name() string        { return c.name }
+func (c Component) Value() utils.Unit   { return c.value }
+func (c *Component) SetValue(value utils.Unit) {
+	c.hasValue = true
+	c.value = value.Clamp()
+}
+func (c *Component) Clear()         { c.hasValue = false }
+func (c *Component) HasValue() bool { return c.hasValue }
 
 func (c *Component) AddValue(value utils.Unit) *Component {
 	c.value += value

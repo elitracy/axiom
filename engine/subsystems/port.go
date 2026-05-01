@@ -28,9 +28,7 @@ type OutputPort struct {
 
 type InputPort struct {
 	port
-	value     utils.Unit
 	component *components.Component
-	received  bool
 }
 
 func newPort(id PortID, name string) port {
@@ -65,12 +63,10 @@ func (p *InputPort) Component() *components.Component { return p.component }
 
 func (p *InputPort) Clear() {
 	p.component.SetValue(0)
-	p.received = false
 }
 
-func (p *InputPort) AddValue(value utils.Unit) {
+func (p *InputPort) SetValue(value utils.Unit) {
 	p.component.AddValue(value)
-	p.received = true
 }
 
 func (p OutputPort) String() string {

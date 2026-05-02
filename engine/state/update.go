@@ -2,7 +2,6 @@ package state
 
 import (
 	"github.com/elias/axiom/engine"
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
@@ -34,10 +33,8 @@ func (ws *State) tickSubsystems() {
 	}
 
 	for _, system := range ws.topoSort() {
-		logging.Debug("system: %v", system.Name())
 		system.Tick()
 	}
-	logging.Debug("")
 }
 
 func (ws *State) topoSort() []Subsystem {

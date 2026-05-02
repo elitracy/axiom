@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/elias/axiom/engine/filesystem"
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/state"
 )
@@ -57,7 +56,8 @@ func (ce *CommandEngine) Execute(cmd string, args ...string) (string, error) {
 		return "", ce.write(args)
 	case "inspect":
 		return ce.inspect(args)
-
+	case "status":
+		return ce.status(args)
 	}
 
 	return "", nil
@@ -155,7 +155,6 @@ func (ce *CommandEngine) tree(args []string) (string, error) {
 		return "", fmt.Errorf("usage: tree <path> <depth?>")
 	}
 
-	logging.Debug("SHELL: %v", ce.shell)
 	return ce.shell.Tree(path, depth), nil
 }
 
@@ -179,7 +178,7 @@ func (ce *CommandEngine) write(args []string) error {
 
 func (ce *CommandEngine) inspect(args []string) (string, error) {
 	if len(args) != 1 {
-		return "", fmt.Errorf("usage: status <subsystem>")
+		return "", fmt.Errorf("usage: inspect <subsystem>")
 	}
 
 	subsystem := args[0]
@@ -229,6 +228,48 @@ func (ce *CommandEngine) inspect(args []string) (string, error) {
 			if conn != nil {
 				output += fmt.Sprintf("\n%s %s", port.Name(), conn.Read())
 			}
+		}
+	}
+
+	return output, nil
+}
+
+func (ce *CommandEngine) status(args []string) (string, error) {
+	if len(args) != 0 {
+		return "", fmt.Errorf("usage: status")
+	}
+
+	systemsDir := ce.shell.Find("systems")
+	if systemsDir == nil {
+		return "", fmt.Errorf("subsystems directory does not exist")
+	}
+
+	var output string
+	for _, subsystemTypeDir := range systemsDir.Children() {
+		output += subsystemTypeDir.Name()
+		for _, subsystemDir := range subsystemTypeDir.Children() {
+			statusFile := subsystemTypeDir.FindChild("status")
+			if statusFile == nil {
+				return "", fmt.Errorf("%s status doesn't exist", subsystemDir)
+			}
+
+			var sortedComponents []*filesystem.Node
+			componentsDir := subsystemDir.FindChild("components")
+			for _, child := range componentsDir.Children() {
+				sortedComponents = append(sortedComponents, child)
+			}
+
+			slices.SortFunc(sortedComponents, func(a, b *filesystem.Node) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			output += fmt.Sprintf("\n %s [%s]", subsystemDir.Name(), statusFile.Read())
+			for _, component := range sortedComponents {
+				compType := component.FindChild("type")
+				compValue := component.FindChild("value")
+				output += fmt.Sprintf("\n  %s (%s): %s", component.Name(), compType.Read(), compValue.Read())
+			}
+			output += "\n"
 		}
 	}
 

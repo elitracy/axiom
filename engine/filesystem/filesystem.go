@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/state"
 	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
@@ -100,9 +99,7 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 			ports := NewDir("ports")
 			dir.AddChild(ports)
 
-			logging.Debug("SYS: %v", subsystem)
 			for _, port := range subsystem.InputPorts() {
-				logging.Debug("PORT: %v", port)
 				if port.Component().Name() == component.Name() {
 					portDir := NewDir(port.Name())
 					connectionFile := NewFile("connection")
@@ -191,8 +188,6 @@ func (s *Shell) Cd(path string) {
 func (s Shell) Cat(path string) string {
 	path = strings.Trim(path, "/")
 	node := s.cwd.GetChild(path)
-	logging.Debug("PATH: %v", path)
-	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""
@@ -207,7 +202,6 @@ func (s Shell) Pwd() string {
 
 func (s Shell) Tree(path string, depth int) string {
 	node := s.cwd.GetChild(path)
-	logging.Debug("NODE: %v", node)
 
 	if node == nil {
 		return ""

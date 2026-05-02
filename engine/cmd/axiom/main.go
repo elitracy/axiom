@@ -78,22 +78,15 @@ func main() {
 	logging.Ok("===STARTING AXIOM===")
 
 	game.cmd("reload")
+	logging.Debug(game.cmd("tree", ".", "6"))
 
 	go func() {
 		for {
-			for _, s := range game.world.Subsystems() {
-				status := game.cmd("inspect", string(s.Name()))
-				logging.Info(status)
-			}
+			status := game.cmd("status")
+			logging.Info(status)
 			time.Sleep(2 * time.Second)
 		}
 	}()
-
-	status := game.cmd("status", "coolant_loop")
-	logging.Info(status)
-
-	log := game.cmd("cat", "/sys/logs/station.log")
-	logging.Info("LOG: %s", log)
 
 	engine.RunGame(game.world, startTick)
 

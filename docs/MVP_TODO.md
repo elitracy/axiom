@@ -158,8 +158,8 @@ The primary gameplay interface. Player types commands to inspect, diagnose, and 
 
 - [x] `CommandEngine` struct with `Execute(input string) string`
 - [x] Dispatch via `map[string]handler`
-- [ ] `status` — table of all subsystems + component values + OK/WARN/CRIT
-- [ ] `inspect <system>` — detailed view with components, connections, input values
+- [x] `status` — table of all subsystems + component values + OK/WARN/CRIT
+- [x] `inspect <system>` — detailed view with components, connections, input values
 - [x] `diagnose <system>` — config errors, out-of-range values, hints
 - [x] `ls [path]` / `cat <path>` — delegate to VFS
 - [x] `write <path>` — multi-line input, write to VFS (only valid under `/config/`)

@@ -80,27 +80,12 @@ func main() {
 
 	game.cmd("reload")
 
-	tree := game.cmd("tree", ".", "6")
-	logging.Info("TREE: %s", tree)
-
-	newConf := string(file) + "\nsystem fooReactor type=power"
-	newConf += "\nset fooReactor.power-out 0.2"
-	newConf += "\nconnect coolant_loop.out.valve-2 -> fooReactor.in.valve-2 0.5"
-	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
-	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
-
-	game.cmd("write", "/usr/conf/station.ax", newConf)
-
-	game.cmd("reload")
-
 	go func() {
 		for {
 			for _, s := range game.world.Subsystems() {
-				// if s.Name() == "ac" {
 				status := game.cmd("inspect", s.Name())
 				msg := fmt.Sprintf(status)
 				logging.Info(msg)
-				// }
 			}
 			time.Sleep(2 * time.Second)
 		}

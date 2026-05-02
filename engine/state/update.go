@@ -2,7 +2,9 @@ package state
 
 import (
 	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems"
+	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -11,9 +13,6 @@ func (ws *State) Update(tick *engine.Tick) {
 }
 
 func (ws *State) tickSubsystems() {
-	visited := make(map[subsystems.SubsystemID]struct{})
-
-	depStack := utils.NewStack[Subsystem]()
 
 	for _, system := range ws.subsystems {
 		for _, port := range system.InputPorts() {
@@ -21,33 +20,50 @@ func (ws *State) tickSubsystems() {
 		}
 	}
 
-	for _, system := range ws.subsystems {
-		depStack.Push(system)
+	sums := make(map[*components.Component]utils.Unit)
 
-		for depStack.Len() > 0 {
-			subsystem := depStack.Pop()
-			if _, seen := visited[subsystem.ID()]; seen {
-				continue
-			}
-
-			visited[subsystem.ID()] = struct{}{}
-
-			for _, conn := range ws.connections[subsystem.Name()] {
-				src := ws.subsystems[conn.SrcSystem()]
-				if _, seen := visited[src.ID()]; !seen {
-					subsystem := ws.subsystems[src.Name()]
-					depStack.Push(subsystem)
-
-				}
-			}
+	for _, conns := range ws.connections {
+		for _, conn := range conns {
+			dest := conn.Dest().Component()
+			sums[dest] += conn.Src().Component().Value() * conn.Throughput()
 		}
-
-		for _, conn := range ws.connections[system.Name()] {
-			srcComp := *conn.Src().Component()
-			conn.Dest().SetValue(srcComp.Value() * conn.Throughput())
-		}
-
-		system.Tick()
 	}
 
+	for conn, value := range sums {
+		conn.SetValue(value)
+	}
+
+	for _, system := range ws.topoSort() {
+		logging.Debug("system: %v", system.Name())
+		system.Tick()
+	}
+	logging.Debug("")
+}
+
+func (ws *State) topoSort() []Subsystem {
+	visited := make(map[subsystems.SubsystemID]struct{})
+	var sorted []Subsystem
+
+	var visit func(subsystem Subsystem)
+	visit = func(subsystem Subsystem) {
+
+		if _, seen := visited[subsystem.ID()]; seen {
+			return
+		}
+
+		visited[subsystem.ID()] = struct{}{}
+
+		for _, conn := range ws.connections[subsystem.Name()] {
+			src := ws.subsystems[conn.SrcSystem()]
+			visit(src)
+		}
+
+		sorted = append(sorted, subsystem)
+	}
+
+	for _, system := range ws.subsystems {
+		visit(system)
+	}
+
+	return sorted
 }

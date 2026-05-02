@@ -11,7 +11,7 @@ import (
 
 func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 
-	tempSubsystems := make(map[string]Subsystem)
+	tempSubsystems := make(map[utils.SubsystemName]Subsystem)
 	var subsystemID subsystems.SubsystemID
 
 	var errors []error
@@ -34,7 +34,7 @@ func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 	}
 
 	for _, setDir := range stationConfig.SetDirectives {
-		system, exists := tempSubsystems[setDir.System]
+		system, exists := tempSubsystems[utils.SubsystemName(setDir.System)]
 
 		if !exists {
 			err := fmt.Errorf("subsystem %s does not exist", setDir.System)
@@ -59,7 +59,7 @@ func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 	}
 
 	for _, connection := range stationConfig.ConnectionDeclarations {
-		srcSystem, exists := tempSubsystems[connection.SrcSystem]
+		srcSystem, exists := tempSubsystems[utils.SubsystemName(connection.SrcSystem)]
 		if !exists {
 			err := fmt.Errorf("Source subsystem %s does not exist", connection.SrcSystem)
 			errors = append(errors, err)
@@ -73,7 +73,7 @@ func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 			continue
 		}
 
-		destSystem, exists := tempSubsystems[connection.DestSystem]
+		destSystem, exists := tempSubsystems[utils.SubsystemName(connection.DestSystem)]
 		if !exists {
 			err := fmt.Errorf("Destination subsystem %s does not exist", connection.DestSystem)
 			errors = append(errors, err)
@@ -111,7 +111,7 @@ func (ws *State) ApplyConfig(stationConfig parser.ParserConfig) error {
 	}
 
 	for _, setDir := range stationConfig.SetDirectives {
-		system := ws.subsystems[setDir.System]
+		system := ws.subsystems[utils.SubsystemName(setDir.System)]
 		comp := system.Components()[setDir.Component]
 		parsedFloat, err := strconv.ParseFloat(setDir.Value, 64)
 		if err != nil {
@@ -122,10 +122,10 @@ func (ws *State) ApplyConfig(stationConfig parser.ParserConfig) error {
 	}
 
 	for _, connection := range stationConfig.ConnectionDeclarations {
-		srcSystem := ws.subsystems[connection.SrcSystem]
+		srcSystem := ws.subsystems[utils.SubsystemName(connection.SrcSystem)]
 		srcPort := srcSystem.OutputPorts()[connection.SrcPort]
 
-		destSystem := ws.subsystems[connection.DestSystem]
+		destSystem := ws.subsystems[utils.SubsystemName(connection.DestSystem)]
 		destPort := destSystem.InputPorts()[connection.DestPort]
 
 		throughputFloat, err := strconv.ParseFloat(connection.Throughput, 64)

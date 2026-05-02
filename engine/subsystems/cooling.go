@@ -9,14 +9,14 @@ type Cooling struct {
 	subsystem
 }
 
-func NewCooling(id SubsystemID, name string, initTemp utils.Unit) *Cooling {
+func NewCooling(id SubsystemID, name utils.SubsystemName, initTemp utils.Unit) *Cooling {
 
 	cooling := &Cooling{
 		subsystem: newSubsystem(id, name, utils.Cooling),
 	}
 
 	cooling.AddComponent("temp-out", components.Temperature, initTemp)
-	cooling.AddPorts("valve", 5, "temp-out", PortOutput)
+	cooling.AddPorts("valve", 5, "temp-out", utils.PortOutput)
 
 	return cooling
 }

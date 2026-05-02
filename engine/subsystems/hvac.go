@@ -10,9 +10,9 @@ type Hvac struct {
 	targetTemp utils.Unit
 }
 
-func NewHvac(id SubsystemID, name string, targetTemp utils.Unit) *Hvac {
+func NewHvac(id SubsystemID, name utils.SubsystemName, targetTemp utils.Unit) *Hvac {
 	hvac := &Hvac{
-		subsystem:  newSubsystem(id, name, utils.Machine),
+		subsystem:  newSubsystem(id, name, utils.Hvac),
 		targetTemp: targetTemp,
 	}
 
@@ -22,8 +22,8 @@ func NewHvac(id SubsystemID, name string, targetTemp utils.Unit) *Hvac {
 	hvac.AddComponent("temp-in", components.Temperature, targetTemp)
 	hvac.AddComponent("power-in", components.Power, 0)
 
-	hvac.AddPorts("socket", 5, "power-in", PortInput)
-	hvac.AddPorts("valve", 5, "temp-in", PortInput)
+	hvac.AddPorts("socket", 5, "power-in", utils.PortInput)
+	hvac.AddPorts("valve", 5, "temp-in", utils.PortInput)
 
 	return hvac
 }

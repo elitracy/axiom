@@ -23,9 +23,9 @@ func (ws *State) tickSubsystems() {
 	sums := make(map[*components.Component]utils.Unit)
 
 	for _, conns := range ws.connections {
-		for _, conn := range conns {
-			dest := conn.Dest().Component()
-			sums[dest] += conn.Src().Component().Value() * conn.Throughput()
+		for _, conn := range conns[utils.PortInput] {
+			dest := conn.DestPort().Component()
+			sums[dest] += conn.SrcPort().Component().Value() * conn.Throughput()
 		}
 	}
 
@@ -53,7 +53,7 @@ func (ws *State) topoSort() []Subsystem {
 
 		visited[subsystem.ID()] = struct{}{}
 
-		for _, conn := range ws.connections[subsystem.Name()] {
+		for _, conn := range ws.connections[subsystem.Name()][utils.PortInput] {
 			src := ws.subsystems[conn.SrcSystem()]
 			visit(src)
 		}

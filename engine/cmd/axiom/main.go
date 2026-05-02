@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -83,9 +82,8 @@ func main() {
 	go func() {
 		for {
 			for _, s := range game.world.Subsystems() {
-				status := game.cmd("inspect", s.Name())
-				msg := fmt.Sprintf(status)
-				logging.Info(msg)
+				status := game.cmd("inspect", string(s.Name()))
+				logging.Info(status)
 			}
 			time.Sleep(2 * time.Second)
 		}

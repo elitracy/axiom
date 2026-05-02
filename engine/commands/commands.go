@@ -225,7 +225,10 @@ func (ce *CommandEngine) inspect(args []string) (string, error) {
 		})
 
 		for _, port := range sortedPorts {
-			output += fmt.Sprintf("\n[%s]", port.Read())
+			conn := port.FindChild("connection")
+			if conn != nil {
+				output += fmt.Sprintf("\n%s %s", port.Name(), conn.Read())
+			}
 		}
 	}
 

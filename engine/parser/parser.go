@@ -3,6 +3,8 @@ package parser
 import (
 	"fmt"
 	"strings"
+
+	"github.com/elias/axiom/engine/utils"
 )
 
 const (
@@ -75,9 +77,22 @@ func (p *Parser) Parse(content []byte) error {
 				continue
 			}
 
-			systemType := typeDec[1]
+			systemTypeString := typeDec[1]
+			var systemType utils.SubsystemType
 
-			p.Config.SubsystemDeclarations[name] = systemType
+			switch systemTypeString {
+			case "power":
+				systemType = utils.Power
+			case "cooling":
+				systemType = utils.Cooling
+			case "hvac":
+				systemType = utils.Hvac
+			default:
+				errors = append(errors, newParseError(row, "invalid subsystem type "+systemTypeString))
+				continue
+			}
+
+			p.Config.SubsystemDeclarations[utils.SubsystemName(name)] = utils.SubsystemType(systemType)
 
 		case keySet:
 			if len(tokens) != 3 {

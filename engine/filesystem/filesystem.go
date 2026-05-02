@@ -17,7 +17,7 @@ type Shell struct {
 
 type worldState interface {
 	Subsystems() []state.Subsystem
-	Connections() map[string][]*connections.Connection
+	Connections() map[utils.SubsystemName]map[utils.PortType][]*connections.Connection
 }
 
 func NewShell() *Shell {
@@ -68,7 +68,7 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 	machines := s.GetChild("sys/systems/machines")
 
 	for _, subsystem := range ws.Subsystems() {
-		dir := NewDir(subsystem.Name())
+		dir := NewDir(string(subsystem.Name()))
 		status := NewFile("status")
 		components := NewDir("components")
 		ports := NewDir("ports")
@@ -104,23 +104,44 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 			for _, port := range subsystem.InputPorts() {
 				logging.Debug("PORT: %v", port)
 				if port.Component().Name() == component.Name() {
-					file := NewFile(port.Name())
-					file.SetReader(func() string {
-						return port.Name()
+					portDir := NewDir(port.Name())
+					connectionFile := NewFile("connection")
+
+					connectionFile.SetReader(func() string {
+						conns := ws.Connections()[subsystem.Name()]
+
+						for _, conn := range conns[utils.PortInput] {
+							if conn.DestPort().ID() == port.ID() {
+								return fmt.Sprintf("← %s.%s @ %.2f", conn.SrcSystem(), conn.SrcPort().Name(), conn.Throughput())
+							}
+						}
+
+						return "<no-connection>"
 					})
 
-					ports.AddChild(file)
+					ports.AddChild(portDir)
 				}
 			}
 
 			for _, port := range subsystem.OutputPorts() {
 				if port.Component().Name() == component.Name() {
-					file := NewFile(port.Name())
-					file.SetReader(func() string {
-						return port.Name()
+					portDir := NewDir(port.Name())
+					connectionFile := NewFile("connection")
+					portDir.AddChild(connectionFile)
+
+					connectionFile.SetReader(func() string {
+						conns := ws.Connections()[subsystem.Name()]
+
+						for _, conn := range conns[utils.PortOutput] {
+							if conn.SrcPort().ID() == port.ID() {
+								return fmt.Sprintf("→ %s.%s @ %.2f", conn.DestSystem(), conn.DestPort().Name(), conn.Throughput())
+							}
+						}
+
+						return "<no-connection>"
 					})
 
-					ports.AddChild(file)
+					ports.AddChild(portDir)
 				}
 			}
 
@@ -131,7 +152,7 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 			power.AddChild(dir)
 		case utils.Cooling:
 			cooling.AddChild(dir)
-		case utils.Machine:
+		case utils.Hvac:
 			machines.AddChild(dir)
 		}
 	}

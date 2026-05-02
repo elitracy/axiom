@@ -11,7 +11,7 @@ type SubsystemID int64
 
 type subsystem struct {
 	id                 SubsystemID
-	name               string
+	name               utils.SubsystemName
 	subsystemType      utils.SubsystemType
 	components         map[string]*components.Component
 	thermalResponses   map[string]utils.ThermalResponse
@@ -21,7 +21,7 @@ type subsystem struct {
 	currentComponentID components.ComponentID
 }
 
-func newSubsystem(id SubsystemID, name string, subsystemType utils.SubsystemType) subsystem {
+func newSubsystem(id SubsystemID, name utils.SubsystemName, subsystemType utils.SubsystemType) subsystem {
 	return subsystem{
 		id:               id,
 		name:             name,
@@ -46,7 +46,7 @@ func (s *subsystem) newComponentID() components.ComponentID {
 }
 
 func (s subsystem) ID() SubsystemID           { return s.id }
-func (s subsystem) Name() string              { return s.name }
+func (s subsystem) Name() utils.SubsystemName { return s.name }
 func (s subsystem) Type() utils.SubsystemType { return s.subsystemType }
 
 func (s subsystem) Components() map[string]*components.Component {
@@ -68,12 +68,12 @@ func (s *subsystem) AddComponent(name string, componentType components.Component
 	return nil
 }
 
-func (s *subsystem) addPort(name string, component string, kind PortType) error {
+func (s *subsystem) addPort(name string, component string, kind utils.PortType) error {
 
 	id := s.newPortID()
 
 	switch kind {
-	case PortInput:
+	case utils.PortInput:
 		name = "in." + name
 
 		if _, exists := s.inputPorts[name]; exists {
@@ -82,7 +82,7 @@ func (s *subsystem) addPort(name string, component string, kind PortType) error 
 
 		port := newInputPort(id, name, s.Components()[component])
 		s.inputPorts[name] = port
-	case PortOutput:
+	case utils.PortOutput:
 		name = "out." + name
 
 		if _, exists := s.components[component]; !exists {
@@ -99,7 +99,7 @@ func (s *subsystem) addPort(name string, component string, kind PortType) error 
 	return nil
 }
 
-func (s *subsystem) AddPorts(prefix string, count int, component string, kind PortType) {
+func (s *subsystem) AddPorts(prefix string, count int, component string, kind utils.PortType) {
 	for i := range count {
 		name := fmt.Sprintf("%s-%d", prefix, i)
 		s.addPort(name, component, kind)

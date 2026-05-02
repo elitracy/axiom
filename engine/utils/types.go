@@ -6,7 +6,16 @@ type SubsystemType int
 const (
 	Power SubsystemType = iota
 	Cooling
-	Machine
+	Hvac
+)
+
+type SubsystemName string
+
+type PortType int
+
+const (
+	PortInput PortType = iota
+	PortOutput
 )
 
 type Status int

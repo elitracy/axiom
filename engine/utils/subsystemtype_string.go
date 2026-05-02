@@ -10,7 +10,7 @@ func _() {
 	var x [1]struct{}
 	_ = x[Power-0]
 	_ = x[Cooling-1]
-	_ = x[Machine-2]
+	_ = x[Hvac-2]
 }
 
 const _SubsystemType_name = "PowerCoolingMachine"

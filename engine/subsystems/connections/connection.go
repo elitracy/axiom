@@ -13,19 +13,19 @@ type Connection struct {
 	id         ConnectionID
 	srcPort    *subsystems.OutputPort
 	destPort   *subsystems.InputPort
-	srcSystem  string
-	destSystem string
+	srcSystem  utils.SubsystemName
+	destSystem utils.SubsystemName
 	throughput utils.Unit
 }
 
-func (c *Connection) ID() ConnectionID            { return c.id }
-func (c *Connection) Src() *subsystems.OutputPort { return c.srcPort }
-func (c *Connection) Dest() *subsystems.InputPort { return c.destPort }
-func (c *Connection) SrcSystem() string           { return c.srcSystem }
-func (c *Connection) DestSystem() string          { return c.destSystem }
-func (c *Connection) Throughput() utils.Unit      { return c.throughput }
+func (c *Connection) ID() ConnectionID                { return c.id }
+func (c *Connection) SrcPort() *subsystems.OutputPort { return c.srcPort }
+func (c *Connection) DestPort() *subsystems.InputPort { return c.destPort }
+func (c *Connection) SrcSystem() utils.SubsystemName  { return c.srcSystem }
+func (c *Connection) DestSystem() utils.SubsystemName { return c.destSystem }
+func (c *Connection) Throughput() utils.Unit          { return c.throughput }
 
-func NewConnection(id ConnectionID, src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem string, destSystem string, throughput utils.Unit) *Connection {
+func NewConnection(id ConnectionID, src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem, destSystem utils.SubsystemName, throughput utils.Unit) *Connection {
 	return &Connection{id, src, dest, srcSystem, destSystem, throughput}
 }
 

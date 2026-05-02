@@ -9,13 +9,6 @@ import (
 
 type PortID int64
 
-type PortType int
-
-const (
-	PortInput PortType = iota
-	PortOutput
-)
-
 type port struct {
 	id   PortID
 	name string

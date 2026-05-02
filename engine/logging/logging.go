@@ -52,9 +52,9 @@ func (l *logger) run() {
 
 	for msg := range l.queue {
 		timeTick := fmt.Sprintf("%s%s", colorGrey, msg.Time.Format("15:04:05.000"))
-		parts := strings.Split(msg.Message, "\n")
-		for _, part := range parts {
-			log.Printf("%s %d %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, part, colorReset)
+		lines := strings.Split(msg.Message, "\n")
+		for _, line := range lines {
+			log.Printf("%s %d %s[%s] %s %s%s\n", timeTick, l.tick.Tick(), msg.Color, msg.Level, msg.Filename, line, colorReset)
 		}
 	}
 	l.wg.Done()
@@ -84,7 +84,13 @@ func (l *logger) log(level, color, format string, args ...any) {
 		fileName = strings.ToUpper(filepath.Base(file))
 	}
 
-	msg := fmt.Sprintf(format, args...)
+	var msg string
+	if len(args) > 0 {
+		msg = fmt.Sprintf(format, args...)
+	} else {
+		msg = format
+	}
+
 	l.queue <- LogMessage{
 		Time:     time.Now(),
 		Tick:     l.tick.Tick(),

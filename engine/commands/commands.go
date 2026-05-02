@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -54,8 +55,8 @@ func (ce *CommandEngine) Execute(cmd string, args ...string) (string, error) {
 		return ce.tree(args)
 	case "write":
 		return "", ce.write(args)
-	case "status":
-		return ce.status(args)
+	case "inspect":
+		return ce.inspect(args)
 
 	}
 
@@ -176,7 +177,7 @@ func (ce *CommandEngine) write(args []string) error {
 	return nil
 }
 
-func (ce *CommandEngine) status(args []string) (string, error) {
+func (ce *CommandEngine) inspect(args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("usage: status <subsystem>")
 	}
@@ -188,10 +189,48 @@ func (ce *CommandEngine) status(args []string) (string, error) {
 		return "", fmt.Errorf("subsystem: %s does not exist", subsystem)
 	}
 
-	status := node.FindChild("status")
-	if status == nil {
+	statusFile := node.FindChild("status")
+	if statusFile == nil {
 		return "", fmt.Errorf("%s status doesn't exist", subsystem)
 	}
 
-	return status.Read(), nil
+	var sortedComponents []*filesystem.Node
+	componentsDir := node.FindChild("components")
+	for _, child := range componentsDir.Children() {
+		sortedComponents = append(sortedComponents, child)
+	}
+
+	slices.SortFunc(sortedComponents, func(a, b *filesystem.Node) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+
+	status := statusFile.Read()
+	var output string
+
+	output = fmt.Sprintf("%s [%s]", subsystem, status)
+	for _, component := range sortedComponents {
+		compType := component.FindChild("type")
+		compValue := component.FindChild("value")
+		compPorts := component.FindChild("ports")
+
+		output += fmt.Sprintf("\n==%s %s %s==", component.Name(), compType.Read(), compValue.Read())
+
+		var sortedPorts []*filesystem.Node
+		for _, port := range compPorts.Children() {
+			sortedPorts = append(sortedPorts, port)
+		}
+
+		slices.SortFunc(sortedPorts, func(a, b *filesystem.Node) int {
+			return strings.Compare(a.Name(), b.Name())
+		})
+
+		for _, port := range sortedPorts {
+			conn := port.FindChild("connection")
+			if conn != nil {
+				output += fmt.Sprintf("\n%s %s", port.Name(), conn.Read())
+			}
+		}
+	}
+
+	return output, nil
 }

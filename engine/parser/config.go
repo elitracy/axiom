@@ -1,5 +1,7 @@
 package parser
 
+import "github.com/elias/axiom/engine/utils"
+
 type setDirective struct {
 	System    string
 	Component string
@@ -15,7 +17,7 @@ type connectionDeclaration struct {
 }
 
 type ParserConfig struct {
-	SubsystemDeclarations  map[string]string
+	SubsystemDeclarations  map[utils.SubsystemName]utils.SubsystemType
 	SetDirectives          []setDirective
 	ConnectionDeclarations []connectionDeclaration
 	Errors                 []parseError
@@ -23,6 +25,6 @@ type ParserConfig struct {
 
 func NewParserConfig() ParserConfig {
 	return ParserConfig{
-		SubsystemDeclarations: make(map[string]string),
+		SubsystemDeclarations: make(map[utils.SubsystemName]utils.SubsystemType),
 	}
 }

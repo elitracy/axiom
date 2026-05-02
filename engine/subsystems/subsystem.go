@@ -11,7 +11,7 @@ type SubsystemID int64
 
 type subsystem struct {
 	id                 SubsystemID
-	name               string
+	name               utils.SubsystemName
 	subsystemType      utils.SubsystemType
 	components         map[string]*components.Component
 	thermalResponses   map[string]utils.ThermalResponse
@@ -21,7 +21,7 @@ type subsystem struct {
 	currentComponentID components.ComponentID
 }
 
-func newSubsystem(id SubsystemID, name string, subsystemType utils.SubsystemType) subsystem {
+func newSubsystem(id SubsystemID, name utils.SubsystemName, subsystemType utils.SubsystemType) subsystem {
 	return subsystem{
 		id:               id,
 		name:             name,
@@ -46,7 +46,7 @@ func (s *subsystem) newComponentID() components.ComponentID {
 }
 
 func (s subsystem) ID() SubsystemID           { return s.id }
-func (s subsystem) Name() string              { return s.name }
+func (s subsystem) Name() utils.SubsystemName { return s.name }
 func (s subsystem) Type() utils.SubsystemType { return s.subsystemType }
 
 func (s subsystem) Components() map[string]*components.Component {
@@ -68,21 +68,21 @@ func (s *subsystem) AddComponent(name string, componentType components.Component
 	return nil
 }
 
-func (s *subsystem) AddPort(name string, component string, kind PortType) error {
+func (s *subsystem) addPort(name string, component string, kind utils.PortType) error {
 
 	id := s.newPortID()
 
 	switch kind {
-	case PortInput:
+	case utils.PortInput:
 		name = "in." + name
 
 		if _, exists := s.inputPorts[name]; exists {
 			return fmt.Errorf("Could not add port, input port %v already exists on %v", name, s.Name())
 		}
 
-		port := newInputPort(id, name, component)
+		port := newInputPort(id, name, s.Components()[component])
 		s.inputPorts[name] = port
-	case PortOutput:
+	case utils.PortOutput:
 		name = "out." + name
 
 		if _, exists := s.components[component]; !exists {
@@ -99,10 +99,10 @@ func (s *subsystem) AddPort(name string, component string, kind PortType) error 
 	return nil
 }
 
-func (s *subsystem) AddPorts(prefix string, count int, component string, kind PortType) {
+func (s *subsystem) AddPorts(prefix string, count int, component string, kind utils.PortType) {
 	for i := range count {
 		name := fmt.Sprintf("%s-%d", prefix, i)
-		s.AddPort(name, component, kind)
+		s.addPort(name, component, kind)
 	}
 }
 
@@ -115,19 +115,4 @@ func (s subsystem) String() string {
 	}
 
 	return output
-}
-
-func (s *subsystem) InputSum(channel string) (utils.Unit, bool) {
-	var sum utils.Unit
-	got := false
-
-	for _, p := range s.inputPorts {
-		if p.channel == channel && p.received {
-			got = true
-			sum += p.value
-			p.Clear()
-		}
-	}
-
-	return sum, got
 }

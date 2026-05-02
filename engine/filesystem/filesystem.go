@@ -1,10 +1,12 @@
 package filesystem
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/state"
+	"github.com/elias/axiom/engine/subsystems/connections"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -15,6 +17,7 @@ type Shell struct {
 
 type worldState interface {
 	Subsystems() []state.Subsystem
+	Connections() map[utils.SubsystemName]map[utils.PortType][]*connections.Connection
 }
 
 func NewShell() *Shell {
@@ -65,15 +68,83 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 	machines := s.GetChild("sys/systems/machines")
 
 	for _, subsystem := range ws.Subsystems() {
-		dir := NewDir(subsystem.Name())
+		dir := NewDir(string(subsystem.Name()))
 		status := NewFile("status")
 		components := NewDir("components")
+		ports := NewDir("ports")
 		dir.AddChild(status)
 		dir.AddChild(components)
+		dir.AddChild(ports)
+
+		status.SetReader(func() string {
+			return subsystem.Status().String()
+		})
 
 		for _, component := range subsystem.Components() {
-			file := NewFile(component.Name())
-			components.AddChild(file)
+			dir := NewDir(component.Name())
+			components.AddChild(dir)
+
+			compType := NewFile("type")
+			compType.SetReader(func() string {
+				return component.Type().String()
+			})
+
+			compValue := NewFile("value")
+			compValue.SetReader(func() string {
+				return fmt.Sprintf("%.2f", component.Value())
+			})
+
+			dir.AddChild(compType)
+			dir.AddChild(compValue)
+
+			ports := NewDir("ports")
+			dir.AddChild(ports)
+
+			logging.Debug("SYS: %v", subsystem)
+			for _, port := range subsystem.InputPorts() {
+				logging.Debug("PORT: %v", port)
+				if port.Component().Name() == component.Name() {
+					portDir := NewDir(port.Name())
+					connectionFile := NewFile("connection")
+
+					connectionFile.SetReader(func() string {
+						conns := ws.Connections()[subsystem.Name()]
+
+						for _, conn := range conns[utils.PortInput] {
+							if conn.DestPort().ID() == port.ID() {
+								return fmt.Sprintf("← %s.%s @ %.2f", conn.SrcSystem(), conn.SrcPort().Name(), conn.Throughput())
+							}
+						}
+
+						return "<no-connection>"
+					})
+
+					ports.AddChild(portDir)
+				}
+			}
+
+			for _, port := range subsystem.OutputPorts() {
+				if port.Component().Name() == component.Name() {
+					portDir := NewDir(port.Name())
+					connectionFile := NewFile("connection")
+					portDir.AddChild(connectionFile)
+
+					connectionFile.SetReader(func() string {
+						conns := ws.Connections()[subsystem.Name()]
+
+						for _, conn := range conns[utils.PortOutput] {
+							if conn.SrcPort().ID() == port.ID() {
+								return fmt.Sprintf("→ %s.%s @ %.2f", conn.DestSystem(), conn.DestPort().Name(), conn.Throughput())
+							}
+						}
+
+						return "<no-connection>"
+					})
+
+					ports.AddChild(portDir)
+				}
+			}
+
 		}
 
 		switch subsystem.Type() {
@@ -81,7 +152,7 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 			power.AddChild(dir)
 		case utils.Cooling:
 			cooling.AddChild(dir)
-		case utils.Machine:
+		case utils.Hvac:
 			machines.AddChild(dir)
 		}
 	}

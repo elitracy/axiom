@@ -9,13 +9,6 @@ import (
 
 type PortID int64
 
-type PortType int
-
-const (
-	PortInput PortType = iota
-	PortOutput
-)
-
 type port struct {
 	id   PortID
 	name string
@@ -28,9 +21,7 @@ type OutputPort struct {
 
 type InputPort struct {
 	port
-	value    utils.Unit
-	channel  string
-	received bool
+	component *components.Component
 }
 
 func newPort(id PortID, name string) port {
@@ -40,10 +31,10 @@ func newPort(id PortID, name string) port {
 	}
 }
 
-func newInputPort(id PortID, name string, channel string) *InputPort {
+func newInputPort(id PortID, name string, component *components.Component) *InputPort {
 	return &InputPort{
-		port:    newPort(id, name),
-		channel: channel,
+		port:      newPort(id, name),
+		component: component,
 	}
 }
 
@@ -57,18 +48,18 @@ func newOutputPort(id PortID, name string, component *components.Component) *Out
 func (p port) ID() PortID   { return p.id }
 func (p port) Name() string { return p.name }
 
-func (p InputPort) String() string {
-	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.channel)
+func (p *InputPort) String() string {
+	return fmt.Sprintf("%s[%d] %s", p.Name(), p.ID(), p.component.Name())
 }
 
+func (p *InputPort) Component() *components.Component { return p.component }
+
 func (p *InputPort) Clear() {
-	p.value = 0
-	p.received = false
+	p.component.SetValue(0)
 }
 
 func (p *InputPort) SetValue(value utils.Unit) {
-	p.value = value
-	p.received = true
+	p.component.AddValue(value)
 }
 
 func (p OutputPort) String() string {

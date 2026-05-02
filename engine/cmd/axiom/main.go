@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -76,37 +75,16 @@ func main() {
 
 	game.cmd("write", "/usr/conf/station.ax", string(file))
 
-	logging.Ok("STARTING AXIOM")
+	logging.Ok("===STARTING AXIOM===")
 
 	game.cmd("reload")
-
-	ls := game.cmd("ls", "/sys/systems/")
-	logging.Info("LS: %s", ls)
-
-	tree := game.cmd("tree", ".", "6")
-	logging.Info("TREE: %s", tree)
-
-	newConf := string(file) + "\nsystem fooReactor type=power"
-	newConf += "\nset fooReactor.power-out 0.2"
-	newConf += "\nconnect coolant_loop.out.valve-2 -> fooReactor.in.valve-2 0.5"
-	newConf += "\nconnect fooReactor.out.socket-1 -> ac.in.socket-2 0.5"
-	newConf += "\nconnect fooReactor.out.valve-1 -> ac.in.valve-2 0.5"
-
-	game.cmd("write", "/usr/conf/station.ax", newConf)
-
-	game.cmd("reload")
-
-	logging.Ok("RELOADED CONFIG")
 
 	go func() {
 		for {
 			for _, s := range game.world.Subsystems() {
-				status := game.cmd("status", s.Name())
-				msg := fmt.Sprintf("%s: %s", s.Name(), status)
-				game.log.Println(msg)
+				status := game.cmd("inspect", string(s.Name()))
+				logging.Info(status)
 			}
-			game.log.Println("")
-			logging.Info(strings.Join(game.log.Read(), ""))
 			time.Sleep(2 * time.Second)
 		}
 	}()

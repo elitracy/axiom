@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/commands"
@@ -42,9 +43,7 @@ func (g *Game) cmd(cmd string, args ...string) string {
 	if err != nil {
 		logging.Error(err.Error())
 		g.log.Print(err.Error())
-		logging.Flush()
-		os.Exit(1)
-		return ""
+		return fmt.Sprintf("error: %s", err.Error())
 	}
 
 	return val
@@ -78,13 +77,31 @@ func main() {
 	logging.Ok("===STARTING AXIOM===")
 
 	game.cmd("reload")
-	logging.Debug(game.cmd("tree", ".", "6"))
 
 	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
 		for {
-			status := game.cmd("status")
-			logging.Info(status)
-			time.Sleep(2 * time.Second)
+			fmt.Print("> ")
+			if !scanner.Scan() {
+				break
+			}
+
+			parts := strings.Fields(scanner.Text())
+			if len(parts) == 0 {
+				fmt.Println()
+				continue
+			}
+
+			if parts[0] == "exit" {
+				fmt.Println("Shutting down...")
+				os.Exit(0)
+			}
+
+			cmd := game.cmd(parts[0], parts[1:]...)
+
+			fmt.Println(cmd)
+			fmt.Println()
+			logging.Info(cmd)
 		}
 	}()
 

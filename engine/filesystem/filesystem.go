@@ -103,6 +103,7 @@ func (s *Shell) ReloadSubsystems(ws worldState) {
 				if port.Component().Name() == component.Name() {
 					portDir := NewDir(port.Name())
 					connectionFile := NewFile("connection")
+					portDir.AddChild(connectionFile)
 
 					connectionFile.SetReader(func() string {
 						conns := ws.Connections()[subsystem.Name()]

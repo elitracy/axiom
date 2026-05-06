@@ -2,6 +2,7 @@
 engine/target/
 **/logs/
 **/tmp/
+*.csv
 
 # OS files
 .DS_Store

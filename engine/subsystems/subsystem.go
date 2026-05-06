@@ -2,8 +2,11 @@ package subsystems
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/elias/axiom/engine/subsystems/components"
+	"github.com/elias/axiom/engine/telemetry"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -106,7 +109,7 @@ func (s *subsystem) AddPorts(prefix string, count int, component string, kind ut
 	}
 }
 
-func (s subsystem) String() string {
+func (s *subsystem) String() string {
 
 	output := fmt.Sprintf("%s[%d]", s.name, s.id)
 
@@ -115,4 +118,25 @@ func (s subsystem) String() string {
 	}
 
 	return output
+}
+
+func (s *subsystem) ExportFields() *telemetry.Export {
+	export := telemetry.NewExport()
+	export.Add("name", string(s.Name()))
+
+	var comps []*components.Component
+	for _, comp := range s.components {
+		comps = append(comps, comp)
+	}
+
+	slices.SortFunc(comps, func(a, b *components.Component) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+
+	for _, comp := range comps {
+		export.Add(comp.Name(), fmt.Sprintf("%.2f", comp.Value()))
+	}
+
+	return export
+
 }

@@ -62,9 +62,20 @@ func main() {
 
 	startTick := engine.NewTick()
 	game := NewGame()
+
+	file, err := os.Create("telemetry.csv")
+	if err != nil {
+		logging.Error("Could not open file: telemetry.csv")
+		game.log.Print(err.Error())
+		logging.Flush()
+		return
+	}
+
+	game.world.AddWriter("telemetry.csv", file, startTick)
+
 	logging.Init("logging/logs/debug.log", startTick)
 
-	file, err := os.ReadFile(initialConfig)
+	configFile, err := os.ReadFile(initialConfig)
 	if err != nil {
 		logging.Error("Could not read file: %s", initialConfig)
 		game.log.Print(err.Error())
@@ -72,7 +83,7 @@ func main() {
 		return
 	}
 
-	game.cmd("write", "/usr/conf/station.ax", string(file))
+	game.cmd("write", "/usr/conf/station.ax", string(configFile))
 
 	logging.Ok("===STARTING AXIOM===")
 

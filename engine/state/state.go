@@ -2,11 +2,14 @@ package state
 
 import (
 	"fmt"
+	"io"
 	"slices"
 
+	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/subsystems/connections"
+	"github.com/elias/axiom/engine/telemetry"
 	"github.com/elias/axiom/engine/utils"
 )
 
@@ -18,6 +21,7 @@ type Subsystem interface {
 	OutputPorts() map[string]*subsystems.OutputPort
 	InputPorts() map[string]*subsystems.InputPort
 	String() string
+	ExportFields() *telemetry.Export
 	Tick()
 	Status() utils.Status
 }
@@ -28,28 +32,35 @@ type State struct {
 
 	subsystems  map[utils.SubsystemName]Subsystem
 	connections map[utils.SubsystemName]map[utils.PortType][]*connections.Connection
+
+	writers map[string]telemetry.TelemetryWriter
 }
 
 func NewState() *State {
 	return &State{
 		subsystems:  make(map[utils.SubsystemName]Subsystem),
 		connections: make(map[utils.SubsystemName]map[utils.PortType][]*connections.Connection),
+		writers:     make(map[string]telemetry.TelemetryWriter),
 	}
 }
 
-func (ws *State) newSubsystemID() subsystems.SubsystemID {
-	id := ws.currentSubsystemID
-	ws.currentSubsystemID++
+func (s *State) AddWriter(name string, writer io.Writer, tick *engine.Tick) {
+	s.writers[name] = *telemetry.NewTelemetryWriter(writer, tick)
+}
+
+func (s *State) newSubsystemID() subsystems.SubsystemID {
+	id := s.currentSubsystemID
+	s.currentSubsystemID++
 	return id
 }
 
-func (ws *State) newConnectionID() connections.ConnectionID {
-	id := ws.currentConnectionID
-	ws.currentConnectionID++
+func (s *State) newConnectionID() connections.ConnectionID {
+	id := s.currentConnectionID
+	s.currentConnectionID++
 	return id
 }
 
-func (ws *State) newSubsystem(id subsystems.SubsystemID, name utils.SubsystemName, subsystemType utils.SubsystemType) (Subsystem, error) {
+func (s *State) newSubsystem(id subsystems.SubsystemID, name utils.SubsystemName, subsystemType utils.SubsystemType) (Subsystem, error) {
 	switch subsystemType {
 	case utils.Power:
 		return subsystems.NewPower(id, name, 0.5), nil
@@ -62,52 +73,52 @@ func (ws *State) newSubsystem(id subsystems.SubsystemID, name utils.SubsystemNam
 	}
 }
 
-func (ws *State) addSubsystem(name utils.SubsystemName, subsystemType utils.SubsystemType) error {
-	id := ws.newSubsystemID()
+func (s *State) addSubsystem(name utils.SubsystemName, subsystemType utils.SubsystemType) error {
+	id := s.newSubsystemID()
 
-	subsystem, err := ws.newSubsystem(id, name, subsystemType)
+	subsystem, err := s.newSubsystem(id, name, subsystemType)
 	if err != nil {
 		return err
 	}
 
-	ws.subsystems[subsystem.Name()] = subsystem
-	ws.connections[subsystem.Name()] = make(map[utils.PortType][]*connections.Connection)
+	s.subsystems[subsystem.Name()] = subsystem
+	s.connections[subsystem.Name()] = make(map[utils.PortType][]*connections.Connection)
 
 	return nil
 }
 
-func (ws *State) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem, destSystem utils.SubsystemName, throughput utils.Unit) {
-	id := ws.newConnectionID()
+func (s *State) addConnection(src *subsystems.OutputPort, dest *subsystems.InputPort, srcSystem, destSystem utils.SubsystemName, throughput utils.Unit) {
+	id := s.newConnectionID()
 
 	connection := connections.NewConnection(id, src, dest, srcSystem, destSystem, throughput)
 
-	ws.connections[srcSystem][utils.PortOutput] = append(ws.connections[srcSystem][utils.PortOutput], connection)
-	ws.connections[destSystem][utils.PortInput] = append(ws.connections[destSystem][utils.PortInput], connection)
+	s.connections[srcSystem][utils.PortOutput] = append(s.connections[srcSystem][utils.PortOutput], connection)
+	s.connections[destSystem][utils.PortInput] = append(s.connections[destSystem][utils.PortInput], connection)
 }
 
-func (ws State) GetSubsystem(name utils.SubsystemName) (Subsystem, error) {
-	if subsystem, exists := ws.subsystems[name]; exists {
+func (s State) GetSubsystem(name utils.SubsystemName) (Subsystem, error) {
+	if subsystem, exists := s.subsystems[name]; exists {
 		return subsystem, nil
 	}
 	return nil, fmt.Errorf("Subsystem not found %s", name)
 }
 
-func (ws *State) Subsystems() []Subsystem {
-	keys := make([]utils.SubsystemName, 0, len(ws.subsystems))
-	for k := range ws.subsystems {
+func (s *State) Subsystems() []Subsystem {
+	keys := make([]utils.SubsystemName, 0, len(s.subsystems))
+	for k := range s.subsystems {
 		keys = append(keys, k)
 	}
 
 	slices.Sort(keys)
 
-	sortedSubsystems := make([]Subsystem, 0, len(ws.subsystems))
+	sortedSubsystems := make([]Subsystem, 0, len(s.subsystems))
 	for _, key := range keys {
-		sortedSubsystems = append(sortedSubsystems, ws.subsystems[key])
+		sortedSubsystems = append(sortedSubsystems, s.subsystems[key])
 	}
 
 	return sortedSubsystems
 }
 
-func (ws *State) Connections() map[utils.SubsystemName]map[utils.PortType][]*connections.Connection {
-	return ws.connections
+func (s *State) Connections() map[utils.SubsystemName]map[utils.PortType][]*connections.Connection {
+	return s.connections
 }

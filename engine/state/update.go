@@ -7,13 +7,22 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (ws *State) Update(tick *engine.Tick) {
-	ws.tickSubsystems()
+func (s *State) Update(tick *engine.Tick) {
+	s.tickSubsystems()
+	s.writeSubsystems()
 }
 
-func (ws *State) tickSubsystems() {
+func (s *State) writeSubsystems() {
+	for _, w := range s.writers {
+		for _, system := range s.Subsystems() {
+			w.Write(system.ExportFields())
+		}
+	}
+}
 
-	for _, system := range ws.subsystems {
+func (s *State) tickSubsystems() {
+
+	for _, system := range s.subsystems {
 		for _, port := range system.InputPorts() {
 			port.Component().Clear()
 		}
@@ -21,7 +30,7 @@ func (ws *State) tickSubsystems() {
 
 	sums := make(map[*components.Component]utils.Unit)
 
-	for _, conns := range ws.connections {
+	for _, conns := range s.connections {
 		for _, conn := range conns[utils.PortInput] {
 			dest := conn.DestPort().Component()
 			sums[dest] += conn.SrcPort().Component().Value() * conn.Throughput()
@@ -32,12 +41,12 @@ func (ws *State) tickSubsystems() {
 		conn.SetValue(value)
 	}
 
-	for _, system := range ws.topoSort() {
+	for _, system := range s.topoSort() {
 		system.Tick()
 	}
 }
 
-func (ws *State) topoSort() []Subsystem {
+func (s *State) topoSort() []Subsystem {
 	visited := make(map[subsystems.SubsystemID]struct{})
 	var sorted []Subsystem
 
@@ -50,15 +59,15 @@ func (ws *State) topoSort() []Subsystem {
 
 		visited[subsystem.ID()] = struct{}{}
 
-		for _, conn := range ws.connections[subsystem.Name()][utils.PortInput] {
-			src := ws.subsystems[conn.SrcSystem()]
+		for _, conn := range s.connections[subsystem.Name()][utils.PortInput] {
+			src := s.subsystems[conn.SrcSystem()]
 			visit(src)
 		}
 
 		sorted = append(sorted, subsystem)
 	}
 
-	for _, system := range ws.subsystems {
+	for _, system := range s.subsystems {
 		visit(system)
 	}
 

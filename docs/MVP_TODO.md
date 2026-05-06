@@ -164,8 +164,7 @@ The primary gameplay interface. Player types commands to inspect, diagnose, and 
 - [x] `ls [path]` / `cat <path>` — delegate to VFS
 - [x] `write <path>` — multi-line input, write to VFS (only valid under `/config/`)
 - [x] `reload` — re-parse `/config/station.ax`, call ApplyConfig(), print errors
-- [ ] `set <sys>.<comp> <value>` — shortcut to modify and re-apply
-- [ ] `help [cmd]` — command list and usage
+- [x] `help [cmd]` — command list and usage
 
 ---
 
@@ -176,10 +175,10 @@ The primary gameplay interface. Player types commands to inspect, diagnose, and 
 
 Write tick snapshots to a CSV file that Godot can read for rendering graphs. One row per component per tick. Flush after each tick so Godot can tail the file.
 
-- [ ] `TelemetryWriter` that opens/creates CSV on init
-- [ ] Header row: `tick,system,component,value`
-- [ ] Append rows after each `Update()`
-- [ ] Flush per tick
+- [x] `TelemetryWriter` that opens/creates CSV on init
+- [x] Header row: `tick,system,component,value`
+- [x] Append rows after each `Update()`
+- [x] Flush per tick
 
 ---
 

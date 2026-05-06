@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/utils"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -34,7 +34,7 @@ type LogMessage struct {
 type logger struct {
 	queue    chan LogMessage
 	filepath string
-	tick     *engine.Tick
+	tick     *utils.Tick
 	wg       sync.WaitGroup
 }
 
@@ -60,7 +60,7 @@ func (l *logger) run() {
 	l.wg.Done()
 }
 
-func Init(filepath string, tick *engine.Tick) {
+func Init(filepath string, tick *utils.Tick) {
 	l := &logger{
 		queue:    make(chan LogMessage, 10),
 		filepath: filepath,

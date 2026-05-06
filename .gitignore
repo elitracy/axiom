@@ -3,6 +3,7 @@ engine/target/
 **/logs/
 **/tmp/
 *.csv
+build/
 
 # OS files
 .DS_Store

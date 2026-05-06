@@ -1,5 +1,7 @@
 package utils
 
+import "sync/atomic"
+
 type SubsystemType int
 
 //go:generate stringer -type=SubsystemType
@@ -27,3 +29,11 @@ const (
 	Critical
 	Offline
 )
+
+type Tick struct {
+	Val atomic.Int64
+}
+
+func (t *Tick) Tick() int64 { return t.Val.Load() }
+
+func NewTick() *Tick { return &Tick{Val: atomic.Int64{}} }

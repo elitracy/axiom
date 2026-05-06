@@ -1,5 +1,0 @@
-package axiom
-
-func main() {
-
-}

@@ -2,10 +2,9 @@ package state
 
 import (
 	"fmt"
-	"io"
 	"slices"
+	"sync"
 
-	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/subsystems/connections"
@@ -33,19 +32,14 @@ type State struct {
 	subsystems  map[utils.SubsystemName]Subsystem
 	connections map[utils.SubsystemName]map[utils.PortType][]*connections.Connection
 
-	writers map[string]telemetry.TelemetryWriter
+	mu sync.RWMutex
 }
 
 func NewState() *State {
 	return &State{
 		subsystems:  make(map[utils.SubsystemName]Subsystem),
 		connections: make(map[utils.SubsystemName]map[utils.PortType][]*connections.Connection),
-		writers:     make(map[string]telemetry.TelemetryWriter),
 	}
-}
-
-func (s *State) AddWriter(name string, writer io.Writer, tick *engine.Tick) {
-	s.writers[name] = *telemetry.NewTelemetryWriter(writer, tick)
 }
 
 func (s *State) newSubsystemID() subsystems.SubsystemID {
@@ -96,7 +90,10 @@ func (s *State) addConnection(src *subsystems.OutputPort, dest *subsystems.Input
 	s.connections[destSystem][utils.PortInput] = append(s.connections[destSystem][utils.PortInput], connection)
 }
 
-func (s State) GetSubsystem(name utils.SubsystemName) (Subsystem, error) {
+func (s *State) GetSubsystem(name utils.SubsystemName) (Subsystem, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if subsystem, exists := s.subsystems[name]; exists {
 		return subsystem, nil
 	}
@@ -104,6 +101,7 @@ func (s State) GetSubsystem(name utils.SubsystemName) (Subsystem, error) {
 }
 
 func (s *State) Subsystems() []Subsystem {
+
 	keys := make([]utils.SubsystemName, 0, len(s.subsystems))
 	for k := range s.subsystems {
 		keys = append(keys, k)
@@ -120,5 +118,8 @@ func (s *State) Subsystems() []Subsystem {
 }
 
 func (s *State) Connections() map[utils.SubsystemName]map[utils.PortType][]*connections.Connection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.connections
 }

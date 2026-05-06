@@ -4,14 +4,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/game"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/parser"
 	"github.com/elias/axiom/engine/state"
+	"github.com/elias/axiom/engine/utils"
 )
 
 func main() {
-	startTick := engine.NewTick()
+	startTick := utils.NewTick()
 	logging.Init("logging/logs/debug.log", startTick)
 	args := os.Args[1:]
 	path := args[0]
@@ -57,5 +58,5 @@ func main() {
 		}
 	}()
 
-	engine.RunGame(world, startTick)
+	game.RunSimulation(world, startTick)
 }

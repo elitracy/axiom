@@ -12,38 +12,37 @@ import (
 	"github.com/elias/axiom/engine/state"
 )
 
-
 type command struct {
-	name    string
-	helpMsg string
+	name     string
+	helpMsg  string
 	usageMsg string
-	handler func([]string) (string, error)
+	handler  func([]string) (string, error)
 }
 
 type CommandEngine struct {
-	state *state.State
-	shell *filesystem.Shell
+	state    *state.State
+	shell    *filesystem.Shell
 	commands map[string]command
 }
 
 func NewCommandEngine(state *state.State, shell *filesystem.Shell) *CommandEngine {
 	ce := &CommandEngine{
-		state: state,
-		shell: shell,
+		state:    state,
+		shell:    shell,
 		commands: make(map[string]command),
 	}
 	ce.commands = map[string]command{
-			"diagnose": {"diagnose", "checks the station config file for errors", "diagnose", ce.diagnose},
-			"reload": {"reload", "reloads the station using the station config file", "reload", ce.reload},
-			"cat": {"cat", "displays the contents of the provded file", "cat <path>", ce.cat},
-			"ls": {"ls", "displays the contents of the provided directory", "ls <path>", ce.ls},
-			"tree": {"tree", "displays the file/directory structure of the provided directory to the specified depth", "tree <path> <depth>", ce.tree},
-			"write": {"write", "writes the provided string to the specific path", "write <path> <contents>", ce.write},
-			"inspect": {"insepct", "returns the details of the specified subsystem", "inspect <subsystem>", ce.inspect},
-			"status": {"status", "returns the station's current status details", "status", ce.status},
-			"help": {"help", "returns help message", "help <cmd?>", ce.help},
-			"exit": {"exit", "closes the terminal", "exit", nil},
-		}
+		"diagnose": {"diagnose", "checks the station config file for errors", "diagnose", ce.diagnose},
+		"reload":   {"reload", "reloads the station using the station config file", "reload", ce.reload},
+		"cat":      {"cat", "displays the contents of the provded file", "cat <path>", ce.cat},
+		"ls":       {"ls", "displays the contents of the provided directory", "ls <path>", ce.ls},
+		"tree":     {"tree", "displays the file/directory structure of the provided directory to the specified depth", "tree <path> <depth>", ce.tree},
+		"write":    {"write", "writes the provided string to the specific path", "write <path> <contents>", ce.write},
+		"inspect":  {"insepct", "returns the details of the specified subsystem", "inspect <subsystem>", ce.inspect},
+		"status":   {"status", "returns the station's current status details", "status", ce.status},
+		"help":     {"help", "returns help message", "help <cmd?>", ce.help},
+		"exit":     {"exit", "closes the terminal", "exit", nil},
+	}
 
 	return ce
 }
@@ -78,11 +77,11 @@ func (ce *CommandEngine) diagnose(args []string) (string, error) {
 
 	errs := ce.state.ValidateConfig(parser.Config)
 	if errs != nil {
-		var errMsgs[]string
+		var errMsgs []string
 		for _, err := range errs {
 			errMsgs = append(errMsgs, err.Error())
 		}
-		errsMsgsJoined :=strings.Join(errMsgs, "\n") 
+		errsMsgsJoined := strings.Join(errMsgs, "\n")
 
 		return "", errors.New(errsMsgsJoined)
 	}
@@ -165,9 +164,9 @@ func (ce *CommandEngine) tree(args []string) (string, error) {
 	return ce.shell.Tree(path, depth), nil
 }
 
-func (ce *CommandEngine) write(args []string) (string,error ){
+func (ce *CommandEngine) write(args []string) (string, error) {
 	if len(args) != 2 {
-		return "",fmt.Errorf(ce.commands["write"].usageMsg)
+		return "", fmt.Errorf(ce.commands["write"].usageMsg)
 	}
 
 	path := args[0]
@@ -291,7 +290,7 @@ func (ce *CommandEngine) help(args []string) (string, error) {
 			cmds = append(cmds, cmd)
 		}
 
-		slices.SortFunc(cmds, func (a, b command) int {
+		slices.SortFunc(cmds, func(a, b command) int {
 			return strings.Compare(a.name, b.name)
 		})
 

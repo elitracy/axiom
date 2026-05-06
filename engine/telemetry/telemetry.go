@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/elias/axiom/engine"
+	"github.com/elias/axiom/engine/utils"
 )
 
 type Export struct {
@@ -29,10 +29,10 @@ type exportable interface {
 
 type TelemetryWriter struct {
 	writer io.Writer
-	tick   *engine.Tick
+	tick   *utils.Tick
 }
 
-func NewTelemetryWriter(w io.Writer, t *engine.Tick) *TelemetryWriter {
+func NewTelemetryWriter(w io.Writer, t *utils.Tick) *TelemetryWriter {
 	return &TelemetryWriter{
 		writer: w,
 		tick:   t,

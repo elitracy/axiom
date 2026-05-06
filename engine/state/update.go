@@ -1,27 +1,19 @@
 package state
 
 import (
-	"github.com/elias/axiom/engine"
 	"github.com/elias/axiom/engine/subsystems"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (s *State) Update(tick *engine.Tick) {
-	s.tickSubsystems()
-	s.writeSubsystems()
-}
+func (s *State) Update(tick *utils.Tick) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *State) writeSubsystems() {
-	for _, w := range s.writers {
-		for _, system := range s.Subsystems() {
-			w.Write(system.ExportFields())
-		}
-	}
+	s.tickSubsystems()
 }
 
 func (s *State) tickSubsystems() {
-
 	for _, system := range s.subsystems {
 		for _, port := range system.InputPorts() {
 			port.Component().Clear()

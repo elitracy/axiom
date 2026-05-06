@@ -9,7 +9,9 @@ import (
 	"github.com/elias/axiom/engine/utils"
 )
 
-func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
+func (s *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	tempSubsystems := make(map[utils.SubsystemName]Subsystem)
 	var subsystemID subsystems.SubsystemID
@@ -23,7 +25,7 @@ func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 	}
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
-		subsystem, err := ws.newSubsystem(subsystemID, name, systemType)
+		subsystem, err := s.newSubsystem(subsystemID, name, systemType)
 		subsystemID++
 
 		if err != nil {
@@ -100,6 +102,8 @@ func (ws *State) ValidateConfig(stationConfig parser.ParserConfig) []error {
 }
 
 func (ws *State) ApplyConfig(stationConfig parser.ParserConfig) error {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
 
 	for name, systemType := range stationConfig.SubsystemDeclarations {
 		if _, exists := ws.subsystems[name]; !exists {

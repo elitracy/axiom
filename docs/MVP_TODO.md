@@ -187,9 +187,9 @@ Write tick snapshots to a CSV file that Godot can read for rendering graphs. One
 
 Refactor `main.go` from a blocking game loop to a concurrent design: simulation ticks in a background goroutine, player interacts via REPL on the main goroutine.
 
-- [ ] Simulation goroutine ticking once per second
-- [ ] `sync.RWMutex` on WorldState (write-lock during tick, read-lock for commands)
-- [ ] REPL: `bufio.Scanner` on stdin → `Execute()` → print result
+- [x] Simulation goroutine ticking once per second
+- [x] `sync.RWMutex` on WorldState (write-lock during tick, read-lock for commands)
+- [x] REPL: `bufio.Scanner` on stdin → `Execute()` → print result
 - [ ] Boot message with station warning and `help` prompt
 
 ---

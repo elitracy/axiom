@@ -1,0 +1,156 @@
+[gd_scene format=3 uid="uid://bvnqkxou7roj7"]
+
+[ext_resource type="Script" uid="uid://csoins5vgbp53" path="res://scripts/Player.cs" id="1_f3sb7"]
+[ext_resource type="Script" uid="uid://dkagnbeb67u1d" path="res://scripts/Computer.cs" id="1_fj7yv"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_f3sb7"]
+size = Vector3(20, 0.5, 20)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gv5m4"]
+
+[sub_resource type="Sky" id="Sky_gv5m4"]
+
+[sub_resource type="Environment" id="Environment_f3sb7"]
+background_mode = 2
+sky = SubResource("Sky_gv5m4")
+
+[sub_resource type="BoxMesh" id="BoxMesh_fj7yv"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tlwt5"]
+size = Vector3(2, 1.5, 0.8)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_f3sb7"]
+viewport_path = NodePath("Computer/ScreenViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fj7yv"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_f3sb7")
+
+[sub_resource type="QuadMesh" id="QuadMesh_tlwt5"]
+resource_local_to_scene = true
+material = SubResource("StandardMaterial3D_fj7yv")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_fj7yv"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fj7yv"]
+size = Vector3(1.82, 1.13, 4.21)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_aqk2v"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_036b0"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dwbse"]
+
+[node name="World" type="Node3D" unique_id=1847337957]
+
+[node name="Floor" type="StaticBody3D" parent="." unique_id=767558081]
+metadata/_edit_lock_ = true
+metadata/_edit_group_ = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=348204486]
+shape = SubResource("BoxShape3D_f3sb7")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=277023069]
+transform = Transform3D(20, 0, 0, 0, 0.2, 0, 0, 0, 20, 0, 0, 0)
+mesh = SubResource("BoxMesh_gv5m4")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=660982164]
+transform = Transform3D(-0.9996514, -0.0010656188, -0.026382335, -0.026403846, 0.040344402, 0.99883693, 0, 0.99918526, -0.040358476, 0, 5.2594385, 0)
+metadata/_edit_lock_ = true
+metadata/_edit_group_ = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1854297597]
+environment = SubResource("Environment_f3sb7")
+
+[node name="Computer" type="StaticBody3D" parent="." unique_id=796078193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9864834, -5.5289016)
+script = ExtResource("1_fj7yv")
+metadata/_edit_lock_ = true
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Computer" unique_id=2093374702]
+transform = Transform3D(2, 0, 0, 0, 1.5, 0, 0, 0, 0.8, 0, 1.0570157, 0)
+mesh = SubResource("BoxMesh_fj7yv")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Computer" unique_id=1683988190]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0570157, 0)
+shape = SubResource("BoxShape3D_tlwt5")
+
+[node name="Screen" type="MeshInstance3D" parent="Computer" unique_id=349926690]
+transform = Transform3D(1.7962809, 0, 0, 0, 1.260025, 0, 0, 0, 1, 0, 1.0570157, 0.42000008)
+mesh = SubResource("QuadMesh_tlwt5")
+
+[node name="ScreenViewport" type="SubViewport" parent="Computer" unique_id=2110342935]
+size = Vector2i(1280, 720)
+render_target_update_mode = 4
+
+[node name="TerminalUI" type="Control" parent="Computer/ScreenViewport" unique_id=1261737464]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Background" type="ColorRect" parent="Computer/ScreenViewport/TerminalUI" unique_id=503273931]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.051970966, 0.051970966, 0.051970936, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Computer/ScreenViewport/TerminalUI" unique_id=1316970550]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Output" type="RichTextLabel" parent="Computer/ScreenViewport/TerminalUI/VBoxContainer" unique_id=900755292]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_colors/default_color = Color(0, 0.6862745, 0, 1)
+scroll_following = true
+
+[node name="InputRow" type="HBoxContainer" parent="Computer/ScreenViewport/TerminalUI/VBoxContainer" unique_id=2120355644]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="Prompt" type="Label" parent="Computer/ScreenViewport/TerminalUI/VBoxContainer/InputRow" unique_id=1933004885]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.6862745, 0, 1)
+text = "> "
+
+[node name="Input" type="LineEdit" parent="Computer/ScreenViewport/TerminalUI/VBoxContainer/InputRow" unique_id=1377532887]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0.6862745, 0, 1)
+theme_override_styles/focus = SubResource("StyleBoxEmpty_fj7yv")
+
+[node name="InteractionZone" type="Area3D" parent="Computer" unique_id=1004477869]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Computer/InteractionZone" unique_id=1500196976]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.33365244, 0.8246741)
+shape = SubResource("BoxShape3D_fj7yv")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=182694930]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0578058, 0)
+script = ExtResource("1_f3sb7")
+metadata/_edit_group_ = true
+metadata/_edit_lock_ = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1919089956]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.3827927)
+shape = SubResource("CapsuleShape3D_aqk2v")
+
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=355116666]
+transform = Transform3D(1, 0, 0, 0, 0.99532056, 0.0966275, 0, -0.0966275, 0.99532056, 0, 0.89481187, -1.9952159)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Player" unique_id=748951956]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.3827927)
+mesh = SubResource("CapsuleMesh_036b0")
+surface_material_override/0 = SubResource("StandardMaterial3D_dwbse")

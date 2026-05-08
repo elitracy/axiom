@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cwim860sotit5"
+
+[deps]
+
+files=["res://telemetry.ac.translation", "res://telemetry.0.25.translation", "res://telemetry.0.20.translation", "res://telemetry.0.00.translation"]
+
+source_file="res://telemetry.csv"
+dest_files=["res://telemetry.ac.translation", "res://telemetry.0.25.translation", "res://telemetry.0.20.translation", "res://telemetry.0.00.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

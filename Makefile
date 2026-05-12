@@ -2,9 +2,9 @@ SHELL := /bin/bash
 
 ENGINE_DIR := engine
 SHARED_DIR := $(ENGINE_DIR)/cmd/shared
-AXIOM_DIR  := $(ENGINE_DIR)/cmd/axiom
 BUILD_DIR  := build
-CONFIG     := $(ENGINE_DIR)/cmd/axiom/initial_config.ax
+MAIN_FILE  := cmd/axiom/main.go
+CONFIG     := cmd/axiom/initial_config.ax
 
 SO         := $(BUILD_DIR)/axiom.so
 HEADER     := $(BUILD_DIR)/axiom.h
@@ -16,7 +16,7 @@ AXIOM_BIN  := $(BUILD_DIR)/axiom
 all: build-shared test
 
 run:
-	go run ./$(AXIOM_DIR)/... $(CONFIG)
+	cd $(ENGINE_DIR) && go run $(MAIN_FILE) $(CONFIG)
 
 build-shared:
 	mkdir -p $(BUILD_DIR)

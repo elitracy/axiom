@@ -1,6 +1,7 @@
 package subsystems
 
 import (
+	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/subsystems/components"
 	"github.com/elias/axiom/engine/utils"
 )
@@ -31,10 +32,12 @@ func NewHvac(id SubsystemID, name utils.SubsystemName, targetTemp utils.Unit) *H
 func (s *Hvac) Tick() {
 	currentTemp := s.components["temp"].Value()
 
-	tempIn := s.components["temp-in"].Value()
-	powerIn := s.components["power-in"].Value()
+	tempIn := s.components["temp-in"]
+	powerIn := s.components["power-in"]
 
-	net := max(0, tempIn-powerIn)
+	logging.Info("TEMP IN: %v", tempIn.Value())
+
+	net := max(0, tempIn.Value()-powerIn.Value())
 
 	regulationDelta := s.thermalResponses["temp-regulation"].Delta(currentTemp, s.targetTemp)
 

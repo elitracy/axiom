@@ -6,6 +6,6 @@ set reactor.power-out 0.5
 set coolant_loop.temp-out 0.2
 set ac.temp 0.2
 
-connect coolant_loop.out.valve-1 -> reactor.in.valve-1 0.5
+connect coolant_loop.out.valve-1 -> reactor.in.valve-1 0.0
 connect reactor.out.socket-1  -> ac.in.socket-1 0.5
-connect reactor.out.valve-1  -> ac.in.valve-1 0.5
+connect reactor.out.valve-1  -> ac.in.valve-1 1.0

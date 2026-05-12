@@ -56,7 +56,7 @@ func (g *Game) Init(configPath string) error {
 	g.Cmd("write", "/usr/conf/station.ax", string(configFile))
 	g.Cmd("reload")
 
-	logging.Ok("===STARTING AXIOM===")
+	logging.Ok("STARTING AXIOM")
 
 	return nil
 }

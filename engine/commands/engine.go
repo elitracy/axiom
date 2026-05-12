@@ -250,8 +250,17 @@ func (ce *CommandEngine) status(args []string) (string, error) {
 		return "", fmt.Errorf("subsystems directory does not exist")
 	}
 
+	var subsystemTypes []*filesystem.Node
+	for _, s := range systemsDir.Children() {
+		subsystemTypes = append(subsystemTypes, s)
+	}
+
+	slices.SortFunc(subsystemTypes, func(a, b *filesystem.Node) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+
 	var output string
-	for _, subsystemTypeDir := range systemsDir.Children() {
+	for _, subsystemTypeDir := range subsystemTypes {
 		output += subsystemTypeDir.Name()
 		for _, subsystemDir := range subsystemTypeDir.Children() {
 			statusFile := subsystemTypeDir.FindChild("status")

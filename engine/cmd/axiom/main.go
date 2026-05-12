@@ -3,13 +3,50 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/elias/axiom/engine/game"
 	"github.com/elias/axiom/engine/logging"
 	"github.com/elias/axiom/engine/utils"
 )
+
+const (
+	minMsgSleep = 1
+	maxMsgSleep = 3
+)
+
+func getStartupMessages() []string {
+	startupMessages := []string{
+		"BOOTING AXIOM",
+		"SCANNING SYSTEM",
+		"IDENTIFYING SUBSYSTEMS",
+		"RELOADING COMPONENTS",
+	}
+
+	return startupMessages
+}
+
+func showStartupMessages() {
+	for _, msg := range getStartupMessages() {
+		fmt.Printf("%s\n", msg)
+
+		sleep := rand.Intn(maxMsgSleep-minMsgSleep+1) + minMsgSleep
+		time.Sleep(time.Duration(sleep) * time.Second)
+	}
+
+	time.Sleep(time.Duration(1) * time.Second)
+	fmt.Printf("\nSYSTEM STATUS: ")
+	time.Sleep(time.Duration(2) * time.Second)
+	fmt.Printf("WARNING\n\n")
+
+	time.Sleep(time.Duration(1) * time.Second)
+	fmt.Print("> help\n")
+	time.Sleep(time.Duration(1) * time.Second)
+
+}
 
 func main() {
 	tick := utils.NewTick()
@@ -31,10 +68,16 @@ func main() {
 		logging.Error(err.Error())
 		g.Log().Print(err.Error())
 		logging.Flush()
+		return
 	}
 
-	g.StartTickLoop()
+	// showStartupMessages()
 
+	cmd := g.Cmd("help")
+
+	fmt.Printf("%s\n\n", cmd)
+	logging.Info(cmd)
+	g.StartTickLoop()
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("> ")
@@ -56,7 +99,8 @@ func main() {
 		cmd := g.Cmd(parts[0], parts[1:]...)
 
 		fmt.Printf("%s\n\n", cmd)
-		logging.Info(cmd)
+
+		logging.Info("%v", parts)
 	}
 
 }
